@@ -18,12 +18,10 @@ function getYears(){
     const year=String(y??'').trim();
     if(year)found.add(year);
   };
-  // হিসাবের বছর ২০২২ সাল থেকে শুরু হবে। ২০২২ সবসময় থাকবে।
-  // ২০২৩ বা পরবর্তী কোনো বছর শুধুমাত্র মাসিক জমায় প্রকৃত টাকা
-  // সংরক্ষণ হলে সেই বছরটি স্বয়ংক্রিয়ভাবে সব সাল নির্বাচন বক্সে আসবে।
-  // লভ্যাংশ, খরচ বা সম্পদ যোগ করলে নতুন কোনো বছর স্বয়ংক্রিয়ভাবে
-  // তৈরি/যুক্ত হবে না।
-  addYear(2022);
+  // সাল শুধু প্রকৃত মাসিক জমা থেকে আসবে। কোনো জমা না থাকলে
+  // সেই সাল সিলেকশন বক্সে থাকবে না। ২০২২-ও এর ব্যতিক্রম নয়।
+  // তাই ২০২১, ২০২২, ২০২৩ বা অন্য যেকোনো ৪ সংখ্যার জমার সাল
+  // স্বয়ংক্রিয়ভাবে সব সাল নির্বাচন বক্সে যুক্ত হবে।
   payments.forEach(p=>{
     if(Number(p.paid_amount||0)>0) addYear(p.year);
   });
@@ -254,7 +252,7 @@ async function saveMember(){
 async function savePayment(){
   const f=q('paymentForm'),d=Object.fromEntries(new FormData(f).entries());
   const typedYear=normalizeYear(d.year);
-  if(!/^\d{4}$/.test(typedYear)||Number(typedYear)<2022){showMessage('সঠিক ৪ সংখ্যার সাল লিখুন (২০২২ বা পরবর্তী), যেমন ২০২৩।',false);return}
+  if(!/^\d{4}$/.test(typedYear)){showMessage('সঠিক ৪ সংখ্যার সাল লিখুন, যেমন ২০২১ বা ২০২৩।',false);return}
   f.year.value=typedYear;
   const startMonth=Number(d.month),monthCount=Math.max(1,Number(d.month_count||1)),totalAmount=Number(d.paid_amount||0),year=Number(typedYear);
   if(!d.id && startMonth+monthCount-1>12){showMessage('নির্বাচিত মাস থেকে যত মাস দিয়েছেন তা একই বছরের ডিসেম্বরের মধ্যে হতে হবে।',false);return}
@@ -294,12 +292,22 @@ async function savePayment(){
 }
 async function saveProfit(){
   const d=Object.fromEntries(new FormData(q('profitForm')).entries());
-  const row={year:+d.year,description:d.description.trim(),total_profit:+d.total_profit};
+  const typedYear=normalizeYear(d.year);
+  if(!/^\d{4}$/.test(typedYear)||Number(typedYear)<2022){showMessage('সঠিক ৪ সংখ্যার সাল লিখুন (২০২২ বা পরবর্তী), যেমন ২০২৩।',false);return}
+  const row={year:Number(typedYear),description:d.description.trim(),total_profit:+d.total_profit};
   const res=d.id?await sb.from('profits').update(row).eq('id',d.id):await sb.from('profits').insert(row).select('*').maybeSingle();
   if(res.error){showMessage(res.error.message,false);return}
   showMessage('লভ্যাংশ সংরক্ষণ হয়েছে ✓',true);resetForm('profitForm');await load();
 }
-async function saveExpense(){await saveOrUpdate('expenses',q('expenseForm'),d=>({year:+d.year,description:d.description.trim(),amount:+d.amount}))}
+async function saveExpense(){
+  const d=Object.fromEntries(new FormData(q('expenseForm')).entries());
+  const typedYear=normalizeYear(d.year);
+  if(!/^\d{4}$/.test(typedYear)||Number(typedYear)<2022){showMessage('সঠিক ৪ সংখ্যার সাল লিখুন (২০২২ বা পরবর্তী), যেমন ২০২৩।',false);return}
+  const row={year:Number(typedYear),description:d.description.trim(),amount:+d.amount};
+  const res=d.id?await sb.from('expenses').update(row).eq('id',d.id):await sb.from('expenses').insert(row);
+  if(res.error){showMessage(res.error.message,false);return}
+  showMessage('সফলভাবে সংরক্ষণ হয়েছে ✓',true);resetForm('expenseForm');await load();
+}
 async function saveAsset(){await saveOrUpdate('assets',q('assetForm'),d=>({year:+d.year,date:d.date,category:d.category.trim(),description:d.description.trim(),amount:+d.amount,status:'active'}))}
 async function saveNotice(){await saveOrUpdate('notices',q('noticeForm'),d=>({title:d.title.trim(),description:d.description.trim(),status:'published'}))}
 async function del(table,id){if(!confirm('এই তথ্যটি মুছে ফেলতে চান?'))return;const {error}=await sb.from(table).delete().eq('id',id);if(error){showMessage(error.message,false);return}showMessage('তথ্য মুছে ফেলা হয়েছে ✓',true);await load()}
