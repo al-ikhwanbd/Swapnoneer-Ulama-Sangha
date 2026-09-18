@@ -20,7 +20,9 @@ function getYears(){
   };
   // প্রতিষ্ঠানের চালু হিসাবের বছরগুলো স্থায়ীভাবে থাকবে; নতুন কোনো বছরে
   // প্রকৃত টাকা/হিসাব থাকলে সেটিও স্বয়ংক্রিয়ভাবে যোগ হবে।
-  ['2021','2022','2023','2024'].forEach(addYear);
+  // ২০২২ সাল থেকে শুরু; বর্তমান ও পরবর্তী বছর স্বয়ংক্রিয়ভাবে থাকবে।
+  const currentYear=new Date().getFullYear();
+  for(let y=2022;y<=currentYear+1;y++) addYear(y);
   payments.forEach(p=>{if(Number(p.paid_amount||0)>0)addYear(p.year)});
   profits.forEach(p=>addYear(p.year));
   expenses.forEach(e=>addYear(e.year));
@@ -38,6 +40,10 @@ function fillYearSelectors(){
   fillYearSelect(q('personalYear'),true);
   fillYearSelect(q('allMembersYear'),true);
   fillYearSelect(q('paymentManageYear'),true);
+  fillYearSelect(q('paymentYear'),false);
+  fillYearSelect(q('profitYear'),false);
+  fillYearSelect(q('expenseYear'),false);
+  fillYearSelect(q('assetYear'),false);
   if(q('paymentManageMonth')) q('paymentManageMonth').value='';
   if(q('paymentManageMember')) q('paymentManageMember').value='';
 }
