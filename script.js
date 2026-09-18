@@ -301,39 +301,64 @@ function renderAdminData(){
   q('adminAssets').innerHTML=`<table><thead><tr><th>বছর</th><th>খাত</th><th class="name">বিবরণ</th><th>পরিমাণ</th><th>অ্যাকশন</th></tr></thead><tbody>`+assets.map(x=>`<tr><td>${esc(x.year)}</td><td>${esc(x.category)}</td><td class="name">${esc(x.description)}</td><td>${money(x.amount)}</td><td class="row-actions"><button class="small-btn edit" onclick="editAsset('${esc(x.id)}')">Edit</button><button class="small-btn del" onclick="del('assets','${esc(x.id)}')">Delete</button></td></tr>`).join('')+`</tbody></table>`;
   q('adminNotices').innerHTML=`<table><thead><tr><th>শিরোনাম</th><th class="name">বিবরণ</th><th>তারিখ</th><th>অ্যাকশন</th></tr></thead><tbody>`+notices.map(x=>`<tr><td>${esc(x.title)}</td><td class="name">${esc(x.description)}</td><td>${esc(x.publish_date||'')}</td><td class="row-actions"><button class="small-btn edit" onclick="editNotice('${esc(x.id)}')">Edit</button><button class="small-btn del" onclick="del('notices','${esc(x.id)}')">Delete</button></td></tr>`).join('')+`</tbody></table>`;
 }
-async function checkAdmin(){
-  if(!sb)return;
-  const {data:{user},error:userError}=await sb.auth.getUser();
-  adminUser=user||null;
-  if(userError||!adminUser){
+async function verifyAdmin(user){
+  if(!user){
+    adminUser=null;
     q('loginBox').hidden=false;
     q('adminBox').hidden=true;
-    return;
+    return false;
   }
+  // Login-এর পর সরাসরি পাওয়া authenticated user-কে ব্যবহার করা হচ্ছে।
+  // এতে mobile/browser-এ session state update হওয়ার সামান্য delay-এর কারণে
+  // admin verification ব্যর্থ হওয়ার সমস্যা এড়ানো যায়।
   const {data,error}=await sb.from('admin_users')
-    .select('user_id,role')
-    .eq('user_id',adminUser.id)
-    .eq('role','admin')
+    .select('user_id')
+    .eq('user_id',user.id)
+    .limit(1)
     .maybeSingle();
   if(error){
-    console.error('Admin check error:',error);
+    console.error('Admin verification error:',error);
     q('loginBox').hidden=false;
     q('adminBox').hidden=true;
-    q('loginMsg').textContent='অ্যাডমিন যাচাই করতে সমস্যা হয়েছে। আবার লগইন করুন।';
-    return;
+    showMessage('অ্যাডমিন যাচাই করতে সমস্যা হয়েছে। আবার লগইন করুন।',false,'loginMsg');
+    return false;
   }
   if(!data){
     q('loginBox').hidden=false;
     q('adminBox').hidden=true;
-    q('loginMsg').textContent='এই অ্যাকাউন্টে অ্যাডমিন অনুমতি নেই।';
-    return;
+    showMessage('এই অ্যাকাউন্টে অ্যাডমিন অনুমতি নেই।',false,'loginMsg');
+    return false;
   }
+  adminUser=user;
   q('loginBox').hidden=true;
   q('adminBox').hidden=false;
-  q('adminUser').textContent=adminUser.email||'Admin';
+  q('adminUser').textContent=user.email||'Admin';
   renderAdminData();
+  return true;
 }
-async function login(){if(!sb){showMessage('Supabase configuration পাওয়া যায়নি।',false,'loginMsg');return}showMessage('লগইন হচ্ছে...',true,'loginMsg');const {error}=await sb.auth.signInWithPassword({email:q('adminEmail').value.trim(),password:q('adminPassword').value});if(error){showMessage(error.message,false,'loginMsg');return}await checkAdmin();q('adminPassword').value=''}
+async function checkAdmin(){
+  if(!sb)return false;
+  const {data,error}=await sb.auth.getSession();
+  if(error){
+    console.error('Session check error:',error);
+    q('loginBox').hidden=false;
+    q('adminBox').hidden=true;
+    return false;
+  }
+  return verifyAdmin(data.session?.user||null);
+}
+async function login(){
+  if(!sb){showMessage('Supabase configuration পাওয়া যায়নি।',false,'loginMsg');return}
+  const email=q('adminEmail').value.trim();
+  const password=q('adminPassword').value;
+  if(!email||!password){showMessage('ইমেইল ও পাসওয়ার্ড দিন।',false,'loginMsg');return}
+  showMessage('লগইন হচ্ছে...',true,'loginMsg');
+  const {data,error}=await sb.auth.signInWithPassword({email,password});
+  if(error){showMessage(error.message,false,'loginMsg');return}
+  // signInWithPassword-এর returned user ব্যবহার করে সঙ্গে সঙ্গে admin যাচাই।
+  const ok=await verifyAdmin(data.user||null);
+  if(ok) q('adminPassword').value='';
+}
 async function logout(){await sb.auth.signOut();location.hash='admin';location.reload()}
 function openForm(name){document.querySelectorAll('.admin-form').forEach(f=>f.classList.remove('active'));const f=q(name+'Form');if(f)f.classList.add('active')}
 function openManagement(name){document.querySelectorAll('.admin-data').forEach(x=>x.classList.remove('active'));q('managementArea').style.display='block';const target=q('manage'+name.charAt(0).toUpperCase()+name.slice(1));if(target)target.classList.add('active');if(name==='payments')renderAdminData()}
@@ -475,6 +500,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   q('menuBtn').addEventListener('click',()=>setMenu(true));q('menuClose').addEventListener('click',()=>setMenu(false));q('menuOverlay').addEventListener('click',()=>setMenu(false));document.querySelectorAll('#mobileMenu a').forEach(a=>a.addEventListener('click',()=>setMenu(false)));window.addEventListener('hashchange',route);
   q('personalForm').addEventListener('submit',e=>{e.preventDefault();renderPersonal()});q('membersForm').addEventListener('submit',e=>{e.preventDefault();renderAllMembers()});q('paymentManageYear').addEventListener('change',()=>renderAdminData());q('paymentManageMonth').addEventListener('change',()=>renderAdminData());q('paymentManageMember').addEventListener('change',()=>renderAdminData());
   q('loginBtn').addEventListener('click',login);q('logoutBtn').addEventListener('click',logout);
+  // Auth state change হলে UI-ও সঙ্গে সঙ্গে sync হবে।
+  if(sb) sb.auth.onAuthStateChange((_event,session)=>{ if(session?.user) verifyAdmin(session.user); else { adminUser=null; q('loginBox').hidden=false; q('adminBox').hidden=true; } });
   q('addOpen').addEventListener('click',()=>{const value=q('addSelect').value;if(!value){showMessage('আগে একটি যুক্ত করার বিষয় নির্বাচন করুন।',false);return}openForm(value);q('addArea').scrollIntoView({behavior:'smooth',block:'start'})});
   q('manageOpen').addEventListener('click',()=>{const value=q('manageSelect').value;if(!value){showMessage('আগে একটি সম্পাদনার বিষয় নির্বাচন করুন।',false);return}openManagement(value);q('managementArea').scrollIntoView({behavior:'smooth',block:'start'})});
   q('memberForm').addEventListener('submit',e=>{e.preventDefault();saveMember()});q('paymentForm').addEventListener('submit',e=>{e.preventDefault();savePayment()});q('profitForm').addEventListener('submit',e=>{e.preventDefault();saveProfit()});q('expenseForm').addEventListener('submit',e=>{e.preventDefault();saveExpense()});q('assetForm').addEventListener('submit',e=>{e.preventDefault();saveAsset()});q('noticeForm').addEventListener('submit',e=>{e.preventDefault();saveNotice()});
