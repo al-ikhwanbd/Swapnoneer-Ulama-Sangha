@@ -40,7 +40,7 @@ function fillYearSelectors(){
   fillYearSelect(q('personalYear'),true);
   fillYearSelect(q('allMembersYear'),true);
   fillYearSelect(q('paymentManageYear'),true);
-  fillYearSelect(q('paymentYear'),false);
+  // মাসিক জমার বছর এখানে নির্বাচন নয়—প্রতিবার নতুন/পুরোনো জমার সময় বছর লিখতে হবে।
   fillYearSelect(q('profitYear'),false);
   fillYearSelect(q('expenseYear'),false);
   fillYearSelect(q('assetYear'),false);
@@ -70,7 +70,7 @@ function selectedYears(year){
 // ১২ মাস × ৳৫০০ = ৳৬,০০০ পাওনা। বকেয়া কখনো Database-এর কোনো
 // পুরোনো/ফাঁকা due ফিল্ড থেকে নেওয়া হবে না; প্রকৃত মাসিক জমা থেকেই হিসাব হবে।
 function normalizeYear(v){
-  return String(v ?? '').trim();
+  return String(v ?? '').trim().replace(/[০-৯]/g,d=>String('০১২৩৪৫৬৭৮৯'.indexOf(d)));
 }
 
 // ২০২৫ সালে কোনো সদস্যের মাসিক জমা হয়নি। Database-এ থাকা পুরোনো/ভুল ২০২৫
@@ -253,7 +253,10 @@ async function saveMember(){
 }
 async function savePayment(){
   const f=q('paymentForm'),d=Object.fromEntries(new FormData(f).entries());
-  const startMonth=Number(d.month),monthCount=Math.max(1,Number(d.month_count||1)),totalAmount=Number(d.paid_amount||0),year=Number(d.year);
+  const typedYear=normalizeYear(d.year);
+  if(!/^\d{4}$/.test(typedYear)||Number(typedYear)<2022){showMessage('সঠিক ৪ সংখ্যার সাল লিখুন (২০২২ বা পরবর্তী), যেমন ২০২৩।',false);return}
+  f.year.value=typedYear;
+  const startMonth=Number(d.month),monthCount=Math.max(1,Number(d.month_count||1)),totalAmount=Number(d.paid_amount||0),year=Number(typedYear);
   if(!d.id && startMonth+monthCount-1>12){showMessage('নির্বাচিত মাস থেকে যত মাস দিয়েছেন তা একই বছরের ডিসেম্বরের মধ্যে হতে হবে।',false);return}
   if(d.id){
     const row={member_id:d.member_id,year,month:startMonth,required_amount:MONTHLY_REQUIRED,paid_amount:totalAmount,payment_date:null};
