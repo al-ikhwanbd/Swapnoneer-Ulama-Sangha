@@ -59,3 +59,12 @@ FINAL v7 সংশোধন:
 - সকল বছর selector-এ স্থির ক্রম 2021, 2022, 2023, 2024।
 - 2025 কোনো পুরোনো রেকর্ডে থাকলে display/filter হিসাবের সময় 2024 হিসেবে গণনা হবে।
 - Print/PDF header-এ প্রথমে বড় করে সংস্থার নাম, তার নিচে ছোট করে ঠিকানা, তারপর রিপোর্ট শিরোনাম থাকবে।
+
+FINAL v8 — নতুন সদস্য ও হিসাব যুক্ত করার জন্য Supabase permission setup:
+- Data API-তে members, payments, profits, expenses, assets, notices প্রয়োজনমতো exposed থাকতে হবে।
+- এই ZIP-এর `supabase-policies.sql` একবার Supabase SQL Editor-এ project owner হিসেবে Run করলে RLS permission ঠিক হবে।
+- এতে public report-এর জন্য প্রয়োজনীয় SELECT এবং authenticated admin-এর জন্য INSERT/UPDATE/DELETE permission দেওয়া হয়।
+- `admin_users`-এর existing admin UID-ই admin verification-এর ভিত্তি।
+- সদস্য যুক্ত হলে সদস্য নির্বাচন, জমা, ব্যক্তিগত হিসাব ও সকল সদস্যের হিসাবের selector/রিপোর্টে নাম refresh হবে।
+- জমার সঙ্গে বছর সংরক্ষিত হয় এবং বছরভিত্তিক হিসাব/ফিল্টারে ব্যবহার হয়।
+- একই বছরে একাধিক লভ্যাংশ entry যোগ করা যাবে; আগের entry overwrite হবে না।
