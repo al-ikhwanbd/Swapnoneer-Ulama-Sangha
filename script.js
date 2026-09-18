@@ -18,15 +18,15 @@ function getYears(){
     const year=String(y??'').trim();
     if(year)found.add(year);
   };
-  // প্রতিষ্ঠানের চালু হিসাবের বছরগুলো স্থায়ীভাবে থাকবে; নতুন কোনো বছরে
-  // প্রকৃত টাকা/হিসাব থাকলে সেটিও স্বয়ংক্রিয়ভাবে যোগ হবে।
-  // ২০২২ সাল থেকে শুরু; বর্তমান ও পরবর্তী বছর স্বয়ংক্রিয়ভাবে থাকবে।
-  const currentYear=new Date().getFullYear();
-  for(let y=2022;y<=currentYear+1;y++) addYear(y);
-  payments.forEach(p=>{if(Number(p.paid_amount||0)>0)addYear(p.year)});
-  profits.forEach(p=>addYear(p.year));
-  expenses.forEach(e=>addYear(e.year));
-  assets.forEach(a=>addYear(a.year));
+  // হিসাবের বছর ২০২২ সাল থেকে শুরু হবে। ২০২২ সবসময় থাকবে।
+  // ২০২৩ বা পরবর্তী কোনো বছর শুধুমাত্র মাসিক জমায় প্রকৃত টাকা
+  // সংরক্ষণ হলে সেই বছরটি স্বয়ংক্রিয়ভাবে সব সাল নির্বাচন বক্সে আসবে।
+  // লভ্যাংশ, খরচ বা সম্পদ যোগ করলে নতুন কোনো বছর স্বয়ংক্রিয়ভাবে
+  // তৈরি/যুক্ত হবে না।
+  addYear(2022);
+  payments.forEach(p=>{
+    if(Number(p.paid_amount||0)>0) addYear(p.year);
+  });
   return [...found].sort((a,b)=>Number(a)-Number(b));
 }
 function fillYearSelect(el,includeAll=false){
