@@ -88,6 +88,8 @@ td.name,th.name{text-align:left;white-space:normal}
 .dividend-summary-card.color-card{background:var(--green-soft);border-color:#d4eade}
 .dividend-summary-card span{display:block;color:var(--muted);font-size:14px}
 .dividend-summary-card strong{display:block;font-size:22px;color:var(--green-dark);margin-top:5px}
+.dividend-summary-table{margin-top:0}
+.dividend-admin-tools{display:flex;justify-content:flex-start;margin:0 0 12px}
 .personal-total-summary{margin-top:4px}
 .summary-grid article{background:#fff;border:1px solid #e0e8e4;border-radius:14px;padding:15px;text-align:center}
 .summary-grid article span{display:block;color:var(--muted);font-size:13px}

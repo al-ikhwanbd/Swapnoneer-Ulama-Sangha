@@ -180,7 +180,7 @@ function renderPersonal(){
         <article><span>মোট পরিশোধ</span><strong>${money(paidTotal)}</strong></article>
         <article><span>মোট বাকি</span><strong>${money(dueTotal)}</strong></article>
         <article><span>${publicDividend?'মোট লভ্যাংশ':'লভ্যাংশ'}</span><strong>${publicDividend?money(dividend):'গোপন'}</strong></article>
-        <article class="highlight"><span>${publicDividend?'সর্বমোট টাকা':'সর্বমোট টাকা'}</span><strong>${publicDividend?money(grandTotal):'—'}</strong></article>
+        <article class="highlight"><span>${publicDividend?'সর্বমোট প্রাপ্য':'সর্বমোট প্রাপ্য'}</span><strong>${publicDividend?money(grandTotal):'—'}</strong></article>
       </div>`
     : `<div class="member-summary compact-summary">
         <div>মোট পরিশোধ<strong>${money(paidTotal)}</strong></div>
@@ -242,11 +242,11 @@ function isDividendPublic(memberId){
 }
 function renderDividendSummary(){
   const profit=totalProfit('all'),expense=totalExpense('all'),remaining=remainingDividend();
-  return `<div class="detail-block dividend-summary"><div class="detail-heading"><span>💰</span><h3>লভ্যাংশের সংক্ষিপ্ত হিসাব</h3></div><div class="dividend-summary-grid">
-    <article class="dividend-summary-card white-card"><span>মোট লভ্যাংশ</span><strong>${money(profit)}</strong></article>
-    <article class="dividend-summary-card color-card"><span>মোট খরচ</span><strong>${money(expense)}</strong></article>
-    <article class="dividend-summary-card white-card"><span>অবশিষ্ট লভ্যাংশ</span><strong>${money(remaining)}</strong></article>
-  </div></div>`;
+  return `<div class="detail-block dividend-summary"><div class="detail-heading"><span>💰</span><h3>লভ্যাংশের সংক্ষিপ্ত হিসাব</h3></div><div class="table-wrap"><table class="detail-table fund-summary-table dividend-summary-table"><tbody>
+    <tr><th>মোট লভ্যাংশ</th><td>${money(profit)}</td></tr>
+    <tr><th>মোট খরচ</th><td>${money(expense)}</td></tr>
+    <tr class="highlight-row"><th>অবশিষ্ট লভ্যাংশ</th><td><b>${money(remaining)}</b></td></tr>
+  </tbody></table></div></div>`;
 }
 
 function renderProfitExpenseDetails(){
@@ -385,7 +385,7 @@ function renderAdminData(){
   q('adminExpenses').innerHTML=`<table><thead><tr><th>বছর</th><th class="name">বিবরণ</th><th>পরিমাণ</th><th>অ্যাকশন</th></tr></thead><tbody>`+expenses.map(x=>`<tr><td>${esc(x.year)}</td><td class="name">${esc(x.description)}</td><td>${money(x.amount)}</td><td class="row-actions"><button class="small-btn edit" onclick="editExpense('${esc(x.id)}')">Edit</button><button class="small-btn del" onclick="del('expenses','${esc(x.id)}')">Delete</button></td></tr>`).join('')+`</tbody></table>`;
   q('adminAssets').innerHTML=`<table><thead><tr><th>বছর</th><th>খাত</th><th class="name">বিবরণ</th><th>পরিমাণ</th><th>অ্যাকশন</th></tr></thead><tbody>`+assets.map(x=>`<tr><td>${esc(x.year)}</td><td>${esc(x.category)}</td><td class="name">${esc(x.description)}</td><td>${money(x.amount)}</td><td class="row-actions"><button class="small-btn edit" onclick="editAsset('${esc(x.id)}')">Edit</button><button class="small-btn del" onclick="del('assets','${esc(x.id)}')">Delete</button></td></tr>`).join('')+`</tbody></table>`;
   q('adminNotices').innerHTML=`<table><thead><tr><th>শিরোনাম</th><th class="name">বিবরণ</th><th>তারিখ</th><th>অ্যাকশন</th></tr></thead><tbody>`+notices.map(x=>`<tr><td>${esc(x.title)}</td><td class="name">${esc(x.description)}</td><td>${esc(x.publish_date||'')}</td><td class="row-actions"><button class="small-btn edit" onclick="editNotice('${esc(x.id)}')">Edit</button><button class="small-btn del" onclick="del('notices','${esc(x.id)}')">Delete</button></td></tr>`).join('')+`</tbody></table>`;
-  q('adminDividends').innerHTML=`<table><thead><tr><th>ক্রমিক</th><th class="name">সদস্য</th><th>সকল বছরের জমা</th><th>লভ্যাংশ</th><th>অবস্থা</th><th>অ্যাকশন</th></tr></thead><tbody>`+orderedMembers.map((m,i)=>{const pub=isDividendPublic(m.id);return `<tr><td>${Number(m.serial_no||i+1).toLocaleString('bn-BD')}</td><td class="name">${esc(m.name||'')}</td><td>${money(memberPaid(m,'all'))}</td><td>${money(memberDividend(m))}</td><td>${pub?'Public':'Hidden'}</td><td class="row-actions"><button class="small-btn ${pub?'del':'edit'}" onclick="toggleDividendVisibility('${esc(m.id)}',${!pub})">${pub?'Hide':'Public'}</button></td></tr>`}).join('')+`</tbody></table>`;
+  q('adminDividends').innerHTML=`<div class="dividend-admin-tools"><button type="button" class="btn btn-primary" onclick="makeAllDividendsPublic()">🟢 সকল সদস্যের লভ্যাংশ Public করুন</button></div><table><thead><tr><th>ক্রমিক</th><th class="name">সদস্য</th><th>সকল বছরের জমা</th><th>লভ্যাংশ</th><th>অবস্থা</th><th>অ্যাকশন</th></tr></thead><tbody>`+orderedMembers.map((m,i)=>{const pub=isDividendPublic(m.id);return `<tr><td>${Number(m.serial_no||i+1).toLocaleString('bn-BD')}</td><td class="name">${esc(m.name||'')}</td><td>${money(memberPaid(m,'all'))}</td><td>${money(memberDividend(m))}</td><td>${pub?'Public':'Hidden'}</td><td class="row-actions"><button class="small-btn ${pub?'del':'edit'}" onclick="toggleDividendVisibility('${esc(m.id)}',${!pub})">${pub?'Hide':'Public'}</button></td></tr>`}).join('')+`</tbody></table>`;
 
 }
 async function checkAdmin(){if(!sb)return;const {data:{session}}=await sb.auth.getSession();adminUser=session?.user||null;if(!adminUser){q('loginBox').hidden=false;q('adminBox').hidden=true;return}const {data,error}=await sb.from('admin_users').select('user_id').eq('user_id',adminUser.id).maybeSingle();if(error||!data){q('loginBox').hidden=false;q('adminBox').hidden=true;q('loginMsg').textContent='এই অ্যাকাউন্টে অ্যাডমিন অনুমতি নেই।';return}q('loginBox').hidden=true;q('adminBox').hidden=false;q('adminUser').textContent=adminUser.email||'Admin';renderAdminData()}
@@ -400,6 +400,17 @@ async function toggleDividendVisibility(memberId,isPublic){
   const idx=dividendVisibility.findIndex(x=>String(x.member_id)===String(memberId));
   if(idx>=0)dividendVisibility[idx].is_public=isPublic; else dividendVisibility.push(row);
   renderPersonal();renderAllMembersPreview();renderAdminData();showMessage(isPublic?'সদস্যের লভ্যাংশ Public করা হয়েছে ✓':'সদস্যের লভ্যাংশ Hidden করা হয়েছে ✓',true);
+}
+async function makeAllDividendsPublic(){
+  if(!adminUser){showMessage('অ্যাডমিন হিসেবে লগইন করুন।',false);return}
+  if(!members.length){showMessage('কোনো সক্রিয় সদস্য পাওয়া যায়নি।',false);return}
+  if(!confirm('সকল সদস্যের লভ্যাংশ Public করতে চান?'))return;
+  const rows=members.map(m=>({member_id:m.id,is_public:true}));
+  const res=await sb.from('member_dividend_visibility').upsert(rows,{onConflict:'member_id'});
+  if(res.error){showMessage(res.error.message,false);return}
+  dividendVisibility=members.map(m=>({member_id:m.id,is_public:true}));
+  renderPersonal();renderAllMembersPreview();renderAdminData();
+  showMessage('সকল সদস্যের লভ্যাংশ Public করা হয়েছে ✓',true);
 }
 function openManagement(name){document.querySelectorAll('.admin-data').forEach(x=>x.classList.remove('active'));q('managementArea').style.display='block';const target=q('manage'+name.charAt(0).toUpperCase()+name.slice(1));if(target)target.classList.add('active');renderAdminData()}
 function setMenu(open){const menu=q('mobileMenu'),overlay=q('menuOverlay'),btn=q('menuBtn');menu.classList.toggle('open',open);overlay.classList.toggle('show',open);btn.setAttribute('aria-expanded',String(open));document.body.classList.toggle('menu-open',open)}
