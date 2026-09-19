@@ -82,6 +82,13 @@ td.name,th.name{text-align:left;white-space:normal}
 .notice p{margin:4px 0}
 .notice small{color:var(--muted)}
 .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin:4px 0 19px}
+.dividend-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin:4px 0 2px}
+.dividend-summary-card{border:1px solid #e0e8e4;border-radius:14px;padding:15px;text-align:left;min-height:86px}
+.dividend-summary-card.white-card{background:#fff}
+.dividend-summary-card.color-card{background:var(--green-soft);border-color:#d4eade}
+.dividend-summary-card span{display:block;color:var(--muted);font-size:14px}
+.dividend-summary-card strong{display:block;font-size:22px;color:var(--green-dark);margin-top:5px}
+.personal-total-summary{margin-top:4px}
 .summary-grid article{background:#fff;border:1px solid #e0e8e4;border-radius:14px;padding:15px;text-align:center}
 .summary-grid article span{display:block;color:var(--muted);font-size:13px}
 .summary-grid article strong{display:block;font-size:22px;color:var(--green-dark);margin-top:5px}
@@ -146,6 +153,8 @@ footer{background:#075238;color:#fff;text-align:center;padding:24px 0;font-size:
  textarea{height:120px}
  .actions{grid-template-columns:1fr}
  .member-summary{grid-template-columns:1fr}
+ .dividend-summary-grid{grid-template-columns:1fr}
+ .dividend-summary-card{min-height:auto}
  .summary-grid{grid-template-columns:1fr 1fr}
  .admin-choice-grid{grid-template-columns:1fr 1fr}
  .admin-choice-grid button{min-height:100px}

@@ -170,12 +170,25 @@ function renderPersonal(){
     const due=Math.max(monthlyRequired()-paid,0);
     return `<tr><td>${esc(yr)}</td><td>${monthName}</td><td>${paid>0?money(paid):'৳ ০'}</td><td>${money(due)}</td></tr>`;
   })).join('');
+  const publicDividend=isDividendPublic(m.id);
+  const allYear=String(y)==='all';
+  const paidTotal=memberPaid(m,y), dueTotal=memberDue(m,y);
+  const dividend=publicDividend?memberDividend(m):0;
+  const grandTotal=publicDividend?paidTotal+dividend:0;
+  const summary=allYear
+    ? `<div class="summary-grid total-summary personal-total-summary">
+        <article><span>মোট পরিশোধ</span><strong>${money(paidTotal)}</strong></article>
+        <article><span>মোট বাকি</span><strong>${money(dueTotal)}</strong></article>
+        <article><span>${publicDividend?'মোট লভ্যাংশ':'লভ্যাংশ'}</span><strong>${publicDividend?money(dividend):'গোপন'}</strong></article>
+        <article class="highlight"><span>${publicDividend?'সর্বমোট টাকা':'সর্বমোট টাকা'}</span><strong>${publicDividend?money(grandTotal):'—'}</strong></article>
+      </div>`
+    : `<div class="member-summary compact-summary">
+        <div>মোট পরিশোধ<strong>${money(paidTotal)}</strong></div>
+        <div>মোট বাকি<strong>${money(dueTotal)}</strong></div>
+      </div>`;
   q('personalResult').innerHTML=`<div class="report-title"><h3>${esc(m.name)}</h3><p>${label}</p></div>
     <div class="print-only personal-print-details"><h4>মাসভিত্তিক বিস্তারিত হিসাব</h4><div class="table-wrap"><table><thead><tr><th>সাল</th><th>মাস</th><th>পরিশোধ</th><th>বাকি</th></tr></thead><tbody>${detailRows}</tbody></table></div></div>
-    <div class="member-summary compact-summary">
-      <div>মোট পরিশোধ<strong>${money(memberPaid(m,y))}</strong></div>
-      <div>মোট বাকি<strong>${money(memberDue(m,y))}</strong></div>
-    </div>${isDividendPublic(m.id)?`<div class="member-summary compact-summary"><div>সকল বছরের অনুপাতে লভ্যাংশ<strong>${money(memberDividend(m))}</strong></div></div>`:''}
+    ${summary}
     ${downloadButton('personal')}`;
   q('personalResult').scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -229,7 +242,11 @@ function isDividendPublic(memberId){
 }
 function renderDividendSummary(){
   const profit=totalProfit('all'),expense=totalExpense('all'),remaining=remainingDividend();
-  return `<div class="detail-block dividend-summary"><div class="detail-heading"><span>💰</span><h3>লভ্যাংশের সংক্ষিপ্ত হিসাব</h3></div><div class="table-wrap"><table class="detail-table"><tbody><tr><th>মোট লভ্যাংশ</th><td>${money(profit)}</td></tr><tr><th>মোট খরচ</th><td>${money(expense)}</td></tr><tr class="total-row"><th>অবশিষ্ট লভ্যাংশ</th><td>${money(remaining)}</td></tr></tbody></table></div></div>`;
+  return `<div class="detail-block dividend-summary"><div class="detail-heading"><span>💰</span><h3>লভ্যাংশের সংক্ষিপ্ত হিসাব</h3></div><div class="dividend-summary-grid">
+    <article class="dividend-summary-card white-card"><span>মোট লভ্যাংশ</span><strong>${money(profit)}</strong></article>
+    <article class="dividend-summary-card color-card"><span>মোট খরচ</span><strong>${money(expense)}</strong></article>
+    <article class="dividend-summary-card white-card"><span>অবশিষ্ট লভ্যাংশ</span><strong>${money(remaining)}</strong></article>
+  </div></div>`;
 }
 
 function renderProfitExpenseDetails(){
