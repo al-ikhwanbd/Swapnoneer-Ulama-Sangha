@@ -180,7 +180,7 @@ function renderPersonal(){
         <article><span>মোট পরিশোধ</span><strong>${money(paidTotal)}</strong></article>
         <article><span>মোট বাকি</span><strong>${money(dueTotal)}</strong></article>
         <article><span>${publicDividend?'মোট লভ্যাংশ':'লভ্যাংশ'}</span><strong>${publicDividend?money(dividend):'গোপন'}</strong></article>
-        <article class="highlight"><span>${publicDividend?'সর্বমোট টাকা':'সর্বমোট টাকা'}</span><strong>${publicDividend?money(grandTotal):'—'}</strong></article>
+        <article class="highlight"><span>${publicDividend?'সর্বমোট প্রাপ্য':'সর্বমোট প্রাপ্য'}</span><strong>${publicDividend?money(grandTotal):'—'}</strong></article>
       </div>`
     : `<div class="member-summary compact-summary">
         <div>মোট পরিশোধ<strong>${money(paidTotal)}</strong></div>
