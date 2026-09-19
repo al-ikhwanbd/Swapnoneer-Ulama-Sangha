@@ -5,12 +5,20 @@ const months=['জানুয়ারি','ফেব্রুয়ারি',
 const money=n=>`৳ ${Number(n||0).toLocaleString('bn-BD')}`;
 const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const q=id=>document.getElementById(id);
-let members=[],payments=[],profits=[],expenses=[],assets=[],notices=[],adminUser=null,years=[];
+let members=[],payments=[],profits=[],expenses=[],assets=[],notices=[],dividendVisibility=[],adminUser=null,years=[];
 // বার্ষিক হিসাবের মূল নিয়ম: প্রতি সদস্যের জন্য বছরে ১২ মাস × ৳৫০০ = ৳৬,০০০।
 // বকেয়া সবসময় বার্ষিক মোট পাওনা থেকে প্রকৃত পরিশোধ বাদ দিয়ে অটোমেটিক গণনা হবে।
 const MONTHLY_REQUIRED=500;
 const MONTHS_PER_YEAR=12;
-const YEARLY_REQUIRED=MONTHLY_REQUIRED*MONTHS_PER_YEAR;
+function monthlyRequired(){
+  const rows=payments.filter(p=>Number(p.paid_amount||0)>0 && Number(p.required_amount||0)>0).slice().sort((a,b)=>{
+    const ay=Number(normalizeYear(a.year)), by=Number(normalizeYear(b.year));
+    if(ay!==by)return ay-by;
+    return Number(a.month||0)-Number(b.month||0);
+  });
+  return rows.length ? Number(rows[0].required_amount||MONTHLY_REQUIRED) : MONTHLY_REQUIRED;
+}
+function yearlyRequired(){return monthlyRequired()*MONTHS_PER_YEAR;}
 
 function getYears(){
   const found=new Set();
@@ -85,7 +93,7 @@ function memberPaid(m,year){
     .reduce((s,p)=>s+Number(p.paid_amount||0),0);
 }
 function memberRequired(m,year){
-  return selectedYears(year).length * YEARLY_REQUIRED;
+  return selectedYears(year).length * yearlyRequired();
 }
 function memberDue(m,year){
   const paid=memberPaid(m,year);
@@ -96,7 +104,7 @@ function totalPaid(year){
   return payments.filter(p=>isCountablePayment(p) && (target===null||normalizeYear(p.year)===target))
     .reduce((s,p)=>s+Number(p.paid_amount||0),0);
 }
-function totalRequired(year){return members.length*selectedYears(year).length*YEARLY_REQUIRED}
+function totalRequired(year){return members.length*selectedYears(year).length*yearlyRequired()}
 function totalDue(year){return Math.max(totalRequired(year)-totalPaid(year),0)}
 function totalExpense(year){return expenses.filter(e=>!year||year==='all'||Number(normalizeYear(e.year))===Number(normalizeYear(year))).reduce((s,e)=>s+Number(e.amount||0),0)}
 function totalProfit(year){return profits.filter(p=>!year||year==='all'||Number(normalizeYear(p.year))===Number(normalizeYear(year))).reduce((s,p)=>s+Number(p.total_profit||0),0)}
@@ -122,17 +130,18 @@ async function load(){
     }
     return {data:rows,error:null};
   };
-  const [m,p,pr,e,a,n]=await Promise.all([
+  const [m,p,pr,e,a,n,dv]=await Promise.all([
     sb.from('members').select('*').eq('status','active').order('serial_no',{ascending:true,nullsFirst:false}).order('created_at'),
     fetchAllPayments(),
     sb.from('profits').select('*').order('year'),
     sb.from('expenses').select('*').order('date',{ascending:false}),
     sb.from('assets').select('*').eq('status','active').order('date',{ascending:false}),
-    sb.from('notices').select('*').eq('status','published').order('publish_date',{ascending:false})
+    sb.from('notices').select('*').eq('status','published').order('publish_date',{ascending:false}),
+    sb.from('member_dividend_visibility').select('member_id,is_public')
   ]);
-  const errors=[m,p,pr,e,a,n].filter(x=>x.error);
+  const errors=[m,p,pr,e,a,n].filter(x=>x.error && x.error.code!=='42P01');
   if(errors.length){console.error(...errors.map(x=>x.error));q('totalResult').innerHTML='<div class="empty-state">ডাটা লোড করতে সমস্যা হয়েছে। Supabase/RLS সেটিংস পরীক্ষা করুন।</div>';return;}
-  members=m.data||[];payments=p.data||[];profits=pr.data||[];expenses=e.data||[];assets=a.data||[];notices=n.data||[];
+  members=m.data||[];payments=p.data||[];profits=pr.data||[];expenses=e.data||[];assets=a.data||[];notices=n.data||[];dividendVisibility=dv?.data||[];
   fillYearSelectors();fillMemberSelectors();
   renderTotal();renderPersonalTotal();renderProfitExpenseDetails();renderFund();renderNotices();renderAllMembersPreview();
   await checkAdmin();
@@ -158,7 +167,7 @@ function renderPersonal(){
   const detailYears=selectedYears(y);
   const detailRows=detailYears.flatMap(yr=>months.map((monthName,idx)=>{
     const paid=memberMonthPaid(m,yr,idx+1);
-    const due=Math.max(MONTHLY_REQUIRED-paid,0);
+    const due=Math.max(monthlyRequired()-paid,0);
     return `<tr><td>${esc(yr)}</td><td>${monthName}</td><td>${paid>0?money(paid):'৳ ০'}</td><td>${money(due)}</td></tr>`;
   })).join('');
   q('personalResult').innerHTML=`<div class="report-title"><h3>${esc(m.name)}</h3><p>${label}</p></div>
@@ -166,7 +175,7 @@ function renderPersonal(){
     <div class="member-summary compact-summary">
       <div>মোট পরিশোধ<strong>${money(memberPaid(m,y))}</strong></div>
       <div>মোট বাকি<strong>${money(memberDue(m,y))}</strong></div>
-    </div>
+    </div>${isDividendPublic(m.id)?`<div class="member-summary compact-summary"><div>সকল বছরের অনুপাতে লভ্যাংশ<strong>${money(memberDividend(m))}</strong></div></div>`:''}
     ${downloadButton('personal')}`;
   q('personalResult').scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -208,6 +217,21 @@ function renderTotal(){
     <article class="highlight"><span>অবশিষ্ট তহবিল</span><strong>${money(remaining)}</strong></article>
   </div>`;
 }
+function remainingDividend(){return Math.max(totalProfit('all')-totalExpense('all'),0)}
+function memberDividend(m){
+  const total=totalPaid('all');
+  if(total<=0)return 0;
+  return remainingDividend()*(memberPaid(m,'all')/total);
+}
+function isDividendPublic(memberId){
+  const row=dividendVisibility.find(x=>String(x.member_id)===String(memberId));
+  return !!row?.is_public;
+}
+function renderDividendSummary(){
+  const profit=totalProfit('all'),expense=totalExpense('all'),remaining=remainingDividend();
+  return `<div class="detail-block dividend-summary"><div class="detail-heading"><span>💰</span><h3>লভ্যাংশের সংক্ষিপ্ত হিসাব</h3></div><div class="table-wrap"><table class="detail-table"><tbody><tr><th>মোট লভ্যাংশ</th><td>${money(profit)}</td></tr><tr><th>মোট খরচ</th><td>${money(expense)}</td></tr><tr class="total-row"><th>অবশিষ্ট লভ্যাংশ</th><td>${money(remaining)}</td></tr></tbody></table></div></div>`;
+}
+
 function renderProfitExpenseDetails(){
   const profitTotal=totalProfit('all'),expenseTotal=totalExpense('all');
   const profitRows=profits.slice().sort((a,b)=>Number(a.year)-Number(b.year)).map((x,i)=>`<tr><td>${(i+1).toLocaleString('bn-BD')}</td><td>${esc(x.year)}</td><td class="detail-text">${esc(x.description||'-')}</td><td>${money(x.total_profit)}</td></tr>`).join('');
@@ -215,6 +239,7 @@ function renderProfitExpenseDetails(){
   q('profitExpenseDetailsResult').innerHTML=`
     <div class="detail-block profit-detail"><div class="detail-heading"><span>📈</span><h3>লভ্যাংশের বিস্তারিত বিবরণ</h3></div><div class="table-wrap"><table class="detail-table"><thead><tr><th>ক্রমিক</th><th>সাল</th><th class="detail-text">বিবরণ</th><th>পরিমাণ</th></tr></thead><tbody>${profitRows||'<tr><td colspan="4">কোনো লভ্যাংশের তথ্য নেই।</td></tr>'}</tbody><tfoot><tr class="total-row"><td colspan="3">মোট লভ্যাংশ</td><td>${money(profitTotal)}</td></tr></tfoot></table></div></div>
     <div class="detail-block expense-detail"><div class="detail-heading"><span>🧾</span><h3>খরচের বিস্তারিত বিবরণ</h3></div><div class="table-wrap"><table class="detail-table"><thead><tr><th>ক্রমিক</th><th>সাল</th><th class="detail-text">বিবরণ</th><th>পরিমাণ</th></tr></thead><tbody>${expenseRows||'<tr><td colspan="4">কোনো খরচের তথ্য নেই।</td></tr>'}</tbody><tfoot><tr class="total-row"><td colspan="3">মোট খরচ</td><td>${money(expenseTotal)}</td></tr></tfoot></table></div></div>
+    ${renderDividendSummary()}
     `;
 }
 function renderFund(){
@@ -255,9 +280,11 @@ async function savePayment(){
   if(!/^\d{4}$/.test(typedYear)){showMessage('সঠিক ৪ সংখ্যার সাল লিখুন, যেমন ২০২১ বা ২০২৩।',false);return}
   f.year.value=typedYear;
   const startMonth=Number(d.month),monthCount=Math.max(1,Number(d.month_count||1)),totalAmount=Number(d.paid_amount||0),year=Number(typedYear);
+  const monthlyRate=monthCount>0?totalAmount/monthCount:monthlyRequired();
+  if(!(monthlyRate>0)){showMessage('মাসিক জমার পরিমাণ সঠিকভাবে দিন।',false);return}
   if(!d.id && startMonth+monthCount-1>12){showMessage('নির্বাচিত মাস থেকে যত মাস দিয়েছেন তা একই বছরের ডিসেম্বরের মধ্যে হতে হবে।',false);return}
   if(d.id){
-    const row={member_id:d.member_id,year,month:startMonth,required_amount:MONTHLY_REQUIRED,paid_amount:totalAmount,payment_date:null};
+    const row={member_id:d.member_id,year,month:startMonth,required_amount:monthlyRate,paid_amount:totalAmount,payment_date:null};
     const res=await sb.from('payments').update(row).eq('id',d.id);
     if(res.error){showMessage(res.error.message,false);return}
     showMessage('মাসিক জমা সংরক্ষণ হয়েছে ✓',true);resetForm('paymentForm');await load();return;
@@ -276,7 +303,7 @@ async function savePayment(){
   monthList.forEach((month,i)=>{
     const amount=(baseCents+(i===monthCount-1?remainder:0))/100;
     const found=existingRows.find(x=>Number(x.month)===month);
-    const row={member_id:d.member_id,year,month,required_amount:MONTHLY_REQUIRED,paid_amount:amount,payment_date:null};
+    const row={member_id:d.member_id,year,month,required_amount:monthlyRate,paid_amount:amount,payment_date:null};
     if(found) updateRows.push({id:found.id,row});
     else insertRows.push(row);
   });
@@ -341,12 +368,23 @@ function renderAdminData(){
   q('adminExpenses').innerHTML=`<table><thead><tr><th>বছর</th><th class="name">বিবরণ</th><th>পরিমাণ</th><th>অ্যাকশন</th></tr></thead><tbody>`+expenses.map(x=>`<tr><td>${esc(x.year)}</td><td class="name">${esc(x.description)}</td><td>${money(x.amount)}</td><td class="row-actions"><button class="small-btn edit" onclick="editExpense('${esc(x.id)}')">Edit</button><button class="small-btn del" onclick="del('expenses','${esc(x.id)}')">Delete</button></td></tr>`).join('')+`</tbody></table>`;
   q('adminAssets').innerHTML=`<table><thead><tr><th>বছর</th><th>খাত</th><th class="name">বিবরণ</th><th>পরিমাণ</th><th>অ্যাকশন</th></tr></thead><tbody>`+assets.map(x=>`<tr><td>${esc(x.year)}</td><td>${esc(x.category)}</td><td class="name">${esc(x.description)}</td><td>${money(x.amount)}</td><td class="row-actions"><button class="small-btn edit" onclick="editAsset('${esc(x.id)}')">Edit</button><button class="small-btn del" onclick="del('assets','${esc(x.id)}')">Delete</button></td></tr>`).join('')+`</tbody></table>`;
   q('adminNotices').innerHTML=`<table><thead><tr><th>শিরোনাম</th><th class="name">বিবরণ</th><th>তারিখ</th><th>অ্যাকশন</th></tr></thead><tbody>`+notices.map(x=>`<tr><td>${esc(x.title)}</td><td class="name">${esc(x.description)}</td><td>${esc(x.publish_date||'')}</td><td class="row-actions"><button class="small-btn edit" onclick="editNotice('${esc(x.id)}')">Edit</button><button class="small-btn del" onclick="del('notices','${esc(x.id)}')">Delete</button></td></tr>`).join('')+`</tbody></table>`;
+  q('adminDividends').innerHTML=`<table><thead><tr><th>ক্রমিক</th><th class="name">সদস্য</th><th>সকল বছরের জমা</th><th>লভ্যাংশ</th><th>অবস্থা</th><th>অ্যাকশন</th></tr></thead><tbody>`+orderedMembers.map((m,i)=>{const pub=isDividendPublic(m.id);return `<tr><td>${Number(m.serial_no||i+1).toLocaleString('bn-BD')}</td><td class="name">${esc(m.name||'')}</td><td>${money(memberPaid(m,'all'))}</td><td>${money(memberDividend(m))}</td><td>${pub?'Public':'Hidden'}</td><td class="row-actions"><button class="small-btn ${pub?'del':'edit'}" onclick="toggleDividendVisibility('${esc(m.id)}',${!pub})">${pub?'Hide':'Public'}</button></td></tr>`}).join('')+`</tbody></table>`;
+
 }
 async function checkAdmin(){if(!sb)return;const {data:{session}}=await sb.auth.getSession();adminUser=session?.user||null;if(!adminUser){q('loginBox').hidden=false;q('adminBox').hidden=true;return}const {data,error}=await sb.from('admin_users').select('user_id').eq('user_id',adminUser.id).maybeSingle();if(error||!data){q('loginBox').hidden=false;q('adminBox').hidden=true;q('loginMsg').textContent='এই অ্যাকাউন্টে অ্যাডমিন অনুমতি নেই।';return}q('loginBox').hidden=true;q('adminBox').hidden=false;q('adminUser').textContent=adminUser.email||'Admin';renderAdminData()}
 async function login(){if(!sb){showMessage('Supabase configuration পাওয়া যায়নি।',false,'loginMsg');return}showMessage('লগইন হচ্ছে...',true,'loginMsg');const {error}=await sb.auth.signInWithPassword({email:q('adminEmail').value.trim(),password:q('adminPassword').value});if(error){showMessage(error.message,false,'loginMsg');return}await checkAdmin();q('adminPassword').value=''}
 async function logout(){await sb.auth.signOut();location.hash='admin';location.reload()}
 function openForm(name){document.querySelectorAll('.admin-form').forEach(f=>f.classList.remove('active'));const f=q(name+'Form');if(f)f.classList.add('active')}
-function openManagement(name){document.querySelectorAll('.admin-data').forEach(x=>x.classList.remove('active'));q('managementArea').style.display='block';const target=q('manage'+name.charAt(0).toUpperCase()+name.slice(1));if(target)target.classList.add('active');if(name==='payments')renderAdminData()}
+async function toggleDividendVisibility(memberId,isPublic){
+  const row={member_id:memberId,is_public:isPublic};
+  const existing=dividendVisibility.find(x=>String(x.member_id)===String(memberId));
+  const res=existing?await sb.from('member_dividend_visibility').update({is_public:isPublic}).eq('member_id',memberId):await sb.from('member_dividend_visibility').insert(row);
+  if(res.error){showMessage(res.error.message,false);return}
+  const idx=dividendVisibility.findIndex(x=>String(x.member_id)===String(memberId));
+  if(idx>=0)dividendVisibility[idx].is_public=isPublic; else dividendVisibility.push(row);
+  renderPersonal();renderAllMembersPreview();renderAdminData();showMessage(isPublic?'সদস্যের লভ্যাংশ Public করা হয়েছে ✓':'সদস্যের লভ্যাংশ Hidden করা হয়েছে ✓',true);
+}
+function openManagement(name){document.querySelectorAll('.admin-data').forEach(x=>x.classList.remove('active'));q('managementArea').style.display='block';const target=q('manage'+name.charAt(0).toUpperCase()+name.slice(1));if(target)target.classList.add('active');renderAdminData()}
 function setMenu(open){const menu=q('mobileMenu'),overlay=q('menuOverlay'),btn=q('menuBtn');menu.classList.toggle('open',open);overlay.classList.toggle('show',open);btn.setAttribute('aria-expanded',String(open));document.body.classList.toggle('menu-open',open)}
 function openMainMenu(){setMenu(true)}
 function route(){const id=(location.hash||'#personal').slice(1);const valid=['personal','members','due','profitExpenseDetails','fund','notices','admin'];const active=valid.includes(id)?id:'personal';document.querySelectorAll('.page-section').forEach(s=>s.classList.toggle('active',s.id===active));document.querySelectorAll('#mobileMenu a[data-view]').forEach(a=>a.classList.toggle('active',a.dataset.view===active));setMenu(false)}
@@ -452,7 +490,7 @@ function downloadPersonalReport(){
   const m=members.find(x=>String(x.id)===String(id));if(!m)return;
   const detailYears=selectedYears(y);
   const detailRows=detailYears.flatMap(yr=>months.map((monthName,idx)=>{
-    const paid=memberMonthPaid(m,yr,idx+1),due=Math.max(MONTHLY_REQUIRED-paid,0);
+    const paid=memberMonthPaid(m,yr,idx+1),due=Math.max(monthlyRequired()-paid,0);
     return `<tr><td>${esc(yr)}</td><td>${monthName}</td><td>${paid>0?Number(paid).toLocaleString('bn-BD'):'০'}</td><td>${Number(due).toLocaleString('bn-BD')}</td></tr>`;
   })).join('');
   const title=`${m.name} — ব্যক্তিগত হিসাব`;
