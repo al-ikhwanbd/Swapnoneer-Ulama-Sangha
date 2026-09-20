@@ -168,6 +168,10 @@
   <div class="container">© <span id="footerYear"></span> স্বপ্ননীড় উলামা সংঘ<div class="footer-sub">সকল অধিকার সংরক্ষিত</div></div>
 </footer>
 <script src="supabase-config.js"></script>
+<script src="offline-db.js"></script>
 <script src="script.js?v=44"></script>
-</body>
+<div id="offlineStatus" class="offline-status" aria-live="polite"></div><script>
+(function(){function u(){var e=document.getElementById("offlineStatus");if(!e)return;if(navigator.onLine){e.textContent="";e.classList.remove("show");}else{e.textContent="📴 অফলাইন মোড — সর্বশেষ সংরক্ষিত ডাটা ব্যবহার হচ্ছে। ইন্টারনেট এলে পরিবর্তনগুলো Sync হবে।";e.classList.add("show");}}window.addEventListener("online",u);window.addEventListener("offline",u);u();})();
+if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(function(){});}
+</script></body>
 </html>

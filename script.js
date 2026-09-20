@@ -1,5 +1,7 @@
-const sb=(window.supabase&&window.SUPABASE_URL&&window.SUPABASE_ANON_KEY)
+const remoteSb=(window.supabase&&window.SUPABASE_URL&&window.SUPABASE_ANON_KEY)
   ?window.supabase.createClient(window.SUPABASE_URL,window.SUPABASE_ANON_KEY):null;
+window.__remoteSb=remoteSb;
+const sb=window.createHybridClient(remoteSb);
 
 const months=['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
 const money=n=>`৳ ${Number(n||0).toLocaleString('bn-BD')}`;
@@ -116,7 +118,14 @@ function currentFund(){return remainingFund()-totalAssets('all')}
 function downloadButton(kind){return `<div class="result-download"><button class="download-btn" type="button" onclick="${kind==='personal'?'downloadPersonalReport()':'downloadAllMembersReport()'}">⬇️ বিস্তারিত হিসাব ডাউনলোড</button></div>`}
 
 async function load(){
-  if(!sb){q('totalResult').innerHTML='<div class="empty-state">Supabase configuration পাওয়া যায়নি।</div>';return;}
+  if(!remoteSb){q('totalResult').innerHTML='<div class="empty-state">Supabase configuration পাওয়া যায়নি।</div>';return;}
+  if(!navigator.onLine){
+    const local=window.offlineStore.load();
+    members=local.members||[];payments=local.payments||[];profits=local.profits||[];expenses=local.expenses||[];assets=local.assets||[];notices=local.notices||[];dividendVisibility=local.member_dividend_visibility||[];
+    fillYearSelectors();fillMemberSelectors();renderTotal();renderPersonalTotal();renderProfitExpenseDetails();renderFund();renderNotices();renderAllMembersPreview();
+    await checkAdmin();
+    return;
+  }
   q('totalResult').innerHTML='<div class="loading">ডাটা লোড হচ্ছে...</div>';
   // Supabase-এর একবারের select সাধারণত সর্বোচ্চ ১০০০টি row ফেরত দিতে পারে।
   // ২০২১–২০২৪ সালের payments মোট ১৬৩৬টি হওয়ায় একবারে নিলে ২০২৩/২০২৪-এর
@@ -144,6 +153,7 @@ async function load(){
   const errors=[m,p,pr,e,a,n].filter(x=>x.error && x.error.code!=='42P01');
   if(errors.length){console.error(...errors.map(x=>x.error));q('totalResult').innerHTML='<div class="empty-state">ডাটা লোড করতে সমস্যা হয়েছে। Supabase/RLS সেটিংস পরীক্ষা করুন।</div>';return;}
   members=m.data||[];payments=p.data||[];profits=pr.data||[];expenses=e.data||[];assets=a.data||[];notices=n.data||[];dividendVisibility=dv?.data||[];
+  window.offlineStore.snapshot({members,payments,profits,expenses,assets,notices,member_dividend_visibility:dividendVisibility});
   fillYearSelectors();fillMemberSelectors();
   renderTotal();renderPersonalTotal();renderProfitExpenseDetails();renderFund();renderNotices();renderAllMembersPreview();
   await checkAdmin();
@@ -582,6 +592,9 @@ function csvDownload(name,rows){const csv='\ufeff'+rows.map(r=>r.map(v=>`"${Stri
 function downloadAllMembersCSV(){const y=q('allMembersYear').value||'all';const rows=[['ক্রমিক','সদস্যের নাম',...(y==='all'?years:months),'মোট পরিশোধ','মোট বাকি']];members.forEach((m,i)=>rows.push([m.serial_no||i+1,m.name,...(y==='all'?years.map(v=>memberPaid(m,v)):months.map((_,mi)=>payments.filter(p=>isCountablePayment(p)&&String(p.member_id)===String(m.id)&&Number(normalizeYear(p.year))===Number(normalizeYear(y))&&Number(p.month)===mi+1).reduce((s,p)=>s+Number(p.paid_amount||0),0))),memberPaid(m,y),memberDue(m,y)]));csvDownload(`members-${y}.csv`,rows)}
 function downloadAssetsCSV(){csvDownload('fund-assets.csv',[['বছর','খাত','বিস্তারিত','পরিমাণ','তারিখ'],...assets.map(a=>[a.year,a.category,a.description,a.amount,a.date])])}
 
+window.addEventListener('online',()=>window.offlineStore.sync());
+window.onOfflineSynced=()=>load();
+if(navigator.onLine) window.offlineStore.sync();
 document.addEventListener('DOMContentLoaded',()=>{
   q('footerYear').textContent=new Date().getFullYear();
   q('menuBtn').addEventListener('click',()=>setMenu(true));q('menuClose').addEventListener('click',()=>setMenu(false));q('menuOverlay').addEventListener('click',()=>setMenu(false));document.querySelectorAll('#mobileMenu a').forEach(a=>a.addEventListener('click',()=>setMenu(false)));window.addEventListener('hashchange',route);
