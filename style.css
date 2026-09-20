@@ -200,6 +200,8 @@ footer{background:#075238;color:#fff;text-align:center;padding:24px 0;font-size:
   body.printing-report #__printRoot .print-target{display:block!important;position:static!important;left:auto!important;top:auto!important;width:100%!important;margin:0!important;padding:10px!important;background:#fff!important;box-shadow:none!important;border:0!important}
   body.printing-report .result-print{display:none!important}
   body.printing-report .table-wrap{overflow:visible!important}
+  body.printing-report table thead{display:table-row-group!important}
+  body.printing-report table tfoot{display:table-row-group!important}
   body.printing-report table{width:100%!important;font-size:10px!important}
   body.printing-report th,body.printing-report td{padding:6px!important}
   body.printing-report .print-header-generated{display:block!important;text-align:center!important;margin:0 0 14px!important;padding:0!important}

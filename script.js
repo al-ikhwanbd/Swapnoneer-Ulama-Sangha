@@ -528,13 +528,33 @@ function downloadPersonalReport(){
   if(!y||!id){showMessage('আগে সাল ও সদস্য নির্বাচন করে অনুসন্ধান করুন।',false);return;}
   const m=members.find(x=>String(x.id)===String(id));if(!m)return;
   const detailYears=selectedYears(y);
-  const detailRows=detailYears.flatMap(yr=>months.map((monthName,idx)=>{
-    const paid=memberMonthPaid(m,yr,idx+1),due=Math.max(monthlyRequired()-paid,0);
-    return `<tr><td>${esc(yr)}</td><td>${monthName}</td><td>${paid>0?Number(paid).toLocaleString('bn-BD'):'০'}</td><td>${Number(due).toLocaleString('bn-BD')}</td></tr>`;
-  })).join('');
   const title=`${m.name} — ব্যক্তিগত হিসাব`;
   const subtitle=y==='all'?'সকল বছরের বিস্তারিত মাসভিত্তিক হিসাব':`${y} সালের বিস্তারিত মাসভিত্তিক হিসাব`;
-  const body=`<div class="meta"><div><span>সদস্যের নাম</span><strong>${esc(m.name)}</strong></div><div><span>সাল</span><strong>${esc(y==='all'?'সকল বছর':y)}</strong></div></div><div class="table-wrap"><table class="personal-report-table"><thead><tr><th>সাল</th><th>মাস</th><th>পরিশোধ</th><th>বাকি</th></tr></thead><tbody>${detailRows}</tbody></table></div><div class="summary"><div><span>মোট পরিশোধ</span><strong>${money(memberPaid(m,y))}</strong></div><div><span>মোট বাকি</span><strong>${money(memberDue(m,y))}</strong></div></div>`;
+  const paidTotal=memberPaid(m,y), dueTotal=memberDue(m,y);
+  const dividend=memberDividend(m);
+  const grandTotal=paidTotal+dividend;
+  const summary=y==='all'
+    ? `<div class="summary"><div><span>মোট পরিশোধ</span><strong>${money(paidTotal)}</strong></div><div><span>মোট বাকি</span><strong>${money(dueTotal)}</strong></div><div><span>মোট লভ্যাংশ</span><strong>${money(dividend)}</strong></div><div><span>সর্বমোট প্রাপ্য</span><strong>${money(grandTotal)}</strong></div></div>`
+    : `<div class="summary"><div><span>মোট পরিশোধ</span><strong>${money(paidTotal)}</strong></div><div><span>মোট বাকি</span><strong>${money(dueTotal)}</strong></div></div>`;
+  let body;
+  if(y==='all'){
+    const allRows=detailYears.map((yr,rowIdx)=>{
+      const monthCells=months.map((monthName,idx)=>{
+        const paid=memberMonthPaid(m,yr,idx+1);
+        return `<td>${paid>0?Number(paid).toLocaleString('bn-BD'):''}</td>`;
+      }).join('');
+      const yearPaid=memberPaid(m,yr),yearDue=memberDue(m,yr);
+      return `<tr><td>${Number(rowIdx+1).toLocaleString('bn-BD')}</td><td>${esc(yr)}</td>${monthCells}<td>${Number(yearPaid).toLocaleString('bn-BD')}</td><td>${Number(yearDue).toLocaleString('bn-BD')}</td></tr>`;
+    }).join('');
+    const equalWidth=(100/16).toFixed(4);
+    body=`<div class="table-wrap"><table class="personal-report-table" style="table-layout:fixed;width:100%"><colgroup>${Array.from({length:16},()=>`<col style="width:${equalWidth}%">`).join('')}</colgroup><thead><tr><th>ক্রমিক নং</th><th>সাল</th>${months.map(monthName=>`<th>${monthName}</th>`).join('')}<th>মোট পরিশোধ</th><th>মোট বাকি</th></tr></thead><tbody>${allRows}</tbody></table></div>${summary}`;
+  }else{
+    const detailRows=detailYears.flatMap(yr=>months.map((monthName,idx)=>{
+      const paid=memberMonthPaid(m,yr,idx+1),due=Math.max(monthlyRequired()-paid,0);
+      return `<tr><td>${esc(yr)}</td><td>${monthName}</td><td>${paid>0?Number(paid).toLocaleString('bn-BD'):'০'}</td><td>${Number(due).toLocaleString('bn-BD')}</td></tr>`;
+    })).join('');
+    body=`<div class="table-wrap"><table class="personal-report-table"><thead><tr><th>সাল</th><th>মাস</th><th>পরিশোধ</th><th>বাকি</th></tr></thead><tbody>${detailRows}</tbody></table></div>${summary}`;
+  }
   downloadHtmlFile(`personal-${String(y).replace(/[^0-9a-zA-Z_-]/g,'')}-${String(m.name).replace(/[^\u0980-\u09FFa-zA-Z0-9_-]+/g,'-')}.html`,reportShell(title,subtitle,body,false));
 }
 function downloadAllMembersReport(){
