@@ -84,7 +84,9 @@ function normalizeYear(v){
 // হিসাবের স্তরে ২০২৫ সালের payment বাদ দেওয়া হচ্ছে; Database-এর কোনো data
 // পরিবর্তন বা delete করা হচ্ছে না।
 function isCountablePayment(p){
-  return true;
+  // সকল প্রকৃত payment record হিসাবের অংশ। কোনো নির্দিষ্ট বছর
+  // (যেমন ২০২৫) আলাদা করে বাদ দেওয়া হবে না।
+  return Number(p.paid_amount||0) > 0;
 }
 function memberPaid(m,year){
   const target = year==='all'||!year ? null : normalizeYear(year);
@@ -337,7 +339,7 @@ async function savePayment(){
 async function saveProfit(){
   const d=Object.fromEntries(new FormData(q('profitForm')).entries());
   const typedYear=normalizeYear(d.year);
-  if(!/^\d{4}$/.test(typedYear)||Number(typedYear)<2022){showMessage('সঠিক ৪ সংখ্যার সাল লিখুন (২০২২ বা পরবর্তী), যেমন ২০২৩।',false);return}
+  if(!/^\d{4}$/.test(typedYear)){showMessage('সঠিক ৪ সংখ্যার সাল লিখুন, যেমন ২০২১ বা ২০২৩।',false);return}
   const row={year:Number(typedYear),description:d.description.trim(),total_profit:+d.total_profit};
   const res=d.id?await sb.from('profits').update(row).eq('id',d.id):await sb.from('profits').insert(row).select('*').maybeSingle();
   if(res.error){showMessage(res.error.message,false);return}
@@ -346,7 +348,7 @@ async function saveProfit(){
 async function saveExpense(){
   const d=Object.fromEntries(new FormData(q('expenseForm')).entries());
   const typedYear=normalizeYear(d.year);
-  if(!/^\d{4}$/.test(typedYear)||Number(typedYear)<2022){showMessage('সঠিক ৪ সংখ্যার সাল লিখুন (২০২২ বা পরবর্তী), যেমন ২০২৩।',false);return}
+  if(!/^\d{4}$/.test(typedYear)){showMessage('সঠিক ৪ সংখ্যার সাল লিখুন, যেমন ২০২১ বা ২০২৩।',false);return}
   const row={year:Number(typedYear),description:d.description.trim(),amount:+d.amount};
   const res=d.id?await sb.from('expenses').update(row).eq('id',d.id):await sb.from('expenses').insert(row);
   if(res.error){showMessage(res.error.message,false);return}
@@ -512,7 +514,7 @@ function reportShell(title,subtitle,body,landscape=false){
   *{box-sizing:border-box}body{margin:0;padding:24px;background:#fff;color:#17221f;font-family:Arial,"Noto Sans Bengali","Noto Sans",sans-serif}
   .report{max-width:${landscape?'1400px':'900px'};margin:0 auto}.head{text-align:center;margin-bottom:18px}.head h1{margin:0;font-size:28px;font-weight:800}.head p{margin:5px 0 0;font-size:13px;color:#65736e}.title{text-align:center;margin-bottom:18px}.title h2{margin:0 0 5px;font-size:22px}.title p{margin:0;font-size:13px;color:#65736e}
   .meta{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-bottom:14px}.meta>div{border:1px solid #d6e2dd;padding:8px 10px;border-radius:6px}.meta span{display:block;font-size:11px;color:#687772}.meta strong{display:block;margin-top:2px;font-size:14px}
-  .table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}table{width:max-content;min-width:100%;border-collapse:collapse;table-layout:auto;background:#fff}th,td{border:1px solid #c9d6d1;text-align:center;padding:6px 5px;font-size:12px;line-height:1.3;white-space:nowrap;overflow:visible;text-overflow:clip;overflow-wrap:normal;word-break:normal;vertical-align:middle}th{font-weight:800;background:#f0f6f3}td.name,th.name{text-align:left;white-space:nowrap;overflow:visible;text-overflow:clip;overflow-wrap:normal;word-break:normal}.total-row td{font-weight:800;background:#f6faf8}.personal-report-table th,.personal-report-table td{padding:8px 5px;line-height:1.45}.all-years-report-table,.monthly-report-table{table-layout:auto!important;width:max-content!important;min-width:100%!important}.all-years-report-table col.equal-col,.monthly-report-table col.equal-col,.all-years-report-table col.serial-col,.monthly-report-table col.serial-col,.all-years-report-table col.name-col,.monthly-report-table col.name-col{width:auto!important}
+  .table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}table{width:max-content;min-width:100%;border-collapse:collapse;table-layout:auto;background:#fff}th,td{border:1px solid #c9d6d1;text-align:center;padding:6px 5px;font-size:12px;line-height:1.3;white-space:nowrap;overflow:visible;text-overflow:clip;overflow-wrap:normal;word-break:normal;vertical-align:middle}th{font-weight:800;background:#f0f6f3}td.name,th.name{text-align:left;white-space:nowrap;overflow:visible;text-overflow:clip;overflow-wrap:normal;word-break:normal}.total-row td{font-weight:800;background:#f6faf8}.personal-report-table th,.personal-report-table td{padding:8px 5px;line-height:1.45}.all-years-report-table,.monthly-report-table{table-layout:auto!important;width:max-content!important;min-width:100%!important}.all-years-report-table col.equal-col,.monthly-report-table col.equal-col,.all-years-report-table col.serial-col,.monthly-report-table col.serial-col,.all-years-report-table col.name-col,.monthly-report-table col.name-col{width:auto!important}.personal-all-years-table{table-layout:fixed!important;width:max-content!important;min-width:1470px!important}.personal-all-years-table .serial-col{width:85px}.personal-all-years-table .year-col{width:75px}.personal-all-years-table .month-col{width:95px}.personal-all-years-table .total-col{width:115px}.personal-all-years-table .due-col{width:115px}.personal-all-years-table th,.personal-all-years-table td{white-space:nowrap;overflow:visible;text-overflow:clip}
   .summary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}.summary>div{border:1px solid #cfded8;border-radius:7px;padding:9px;text-align:center;background:#f7fbf9}.summary span{display:block;font-size:11px;color:#63716c}.summary strong{display:block;margin-top:3px;font-size:17px}
   .download-note{margin-top:16px;text-align:center;font-size:11px;color:#687772}@media(max-width:600px){body{padding:12px}.head h1{font-size:22px}.title h2{font-size:18px}.meta{grid-template-columns:1fr}.report{max-width:none}th,td{font-size:11px;padding:5px 4px}}
 </style></head><body><main class="report"><div class="head"><h1>স্বপ্ননীড় উলামা সংঘ</h1><p>মোমেনশাহী, ঢাকা, বাংলাদেশ</p></div><div class="title"><h2>${esc(title)}</h2><p>${esc(subtitle)}</p></div>${body}</main></body></html>`;
@@ -546,7 +548,7 @@ function downloadPersonalReport(){
       const yearPaid=memberPaid(m,yr),yearDue=memberDue(m,yr);
       return `<tr><td>${Number(rowIdx+1).toLocaleString('bn-BD')}</td><td>${esc(yr)}</td>${monthCells}<td>${Number(yearPaid).toLocaleString('bn-BD')}</td><td>${Number(yearDue).toLocaleString('bn-BD')}</td></tr>`;
     }).join('');
-    body=`<div class="table-wrap"><table class="personal-report-table" style="table-layout:auto;width:max-content;min-width:100%"><thead><tr><th>ক্রমিক নং</th><th>সাল</th>${months.map(monthName=>`<th>${monthName}</th>`).join('')}<th>মোট পরিশোধ</th><th>মোট বাকি</th></tr></thead><tbody>${allRows}</tbody></table></div>${summary}`;
+    body=`<div class="table-wrap"><table class="personal-report-table personal-all-years-table"><colgroup><col class="serial-col"><col class="year-col">${months.map(()=>'<col class="month-col">').join('')}<col class="total-col"><col class="due-col"></colgroup><thead><tr><th>ক্রমিক নং</th><th>সাল</th>${months.map(monthName=>`<th>${monthName}</th>`).join('')}<th>মোট পরিশোধ</th><th>মোট বাকি</th></tr></thead><tbody>${allRows}</tbody></table></div>${summary}`;
   }else{
     const detailRows=detailYears.flatMap(yr=>months.map((monthName,idx)=>{
       const paid=memberMonthPaid(m,yr,idx+1),due=Math.max(monthlyRequired()-paid,0);
