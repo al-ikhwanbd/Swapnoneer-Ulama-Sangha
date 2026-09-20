@@ -240,9 +240,9 @@ footer{background:#075238;color:#fff;text-align:center;padding:24px 0;font-size:
 .pdf-download-report .pdf-person-meta strong{font-size:13px;display:block;margin-top:2px}
 .pdf-download-report .table-wrap{width:100%;overflow:visible}
 .pdf-download-report table{width:100%;border-collapse:collapse;table-layout:fixed;background:#fff}
-.pdf-download-report th,.pdf-download-report td{border:1px solid #c9d6d1;text-align:center;padding:5px 4px;font-size:9px;line-height:1.25;white-space:nowrap}
+.pdf-download-report th,.pdf-download-report td{border:1px solid #c9d6d1;text-align:center;padding:5px 4px;font-size:9px;line-height:1.25;white-space:normal;overflow-wrap:anywhere;word-break:break-word;vertical-align:middle}
 .pdf-download-report th{font-weight:800;background:#f0f6f3}
-.pdf-download-report td.name,.pdf-download-report th.name{text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pdf-download-report td.name,.pdf-download-report th.name{text-align:left;white-space:normal;overflow-wrap:anywhere;word-break:break-word;overflow:hidden;text-overflow:ellipsis}
 .pdf-download-report .total-row td{font-weight:800;background:#f6faf8}
 .pdf-download-report .pdf-summary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
 .pdf-download-report .pdf-summary>div{border:1px solid #cfded8;border-radius:7px;padding:8px;text-align:center;background:#f7fbf9}
