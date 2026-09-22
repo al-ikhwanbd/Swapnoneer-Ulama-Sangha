@@ -263,4 +263,3 @@ footer{background:#075238;color:#fff;text-align:center;padding:24px 0;font-size:
 /* Keep all-members rows on one horizontal line */
 .member-report-table th,.member-report-table td{white-space:nowrap!important}
 .member-report-table th.name,.member-report-table td.name{white-space:nowrap!important}
-.offline-status{position:fixed;left:10px;right:10px;bottom:10px;z-index:99999;background:#fff3cd;color:#664d03;border:1px solid #ffecb5;border-radius:12px;padding:10px 12px;text-align:center;font-size:13px;box-shadow:0 4px 18px rgba(0,0,0,.12);display:none}.offline-status.show{display:block}
