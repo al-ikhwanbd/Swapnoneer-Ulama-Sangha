@@ -6,6 +6,15 @@ const money=n=>`৳ ${Number(n||0).toLocaleString('bn-BD')}`;
 const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const q=id=>document.getElementById(id);
 let members=[],payments=[],profits=[],expenses=[],assets=[],notices=[],dividendVisibility=[],adminUser=null,years=[];
+const DEFAULT_LAUNCH_BACKGROUND='#ffffff';
+let appSettings={launch_background_color:DEFAULT_LAUNCH_BACKGROUND};
+function validHexColor(v){return /^#[0-9A-Fa-f]{6}$/.test(String(v||'').trim())}
+function applyLaunchBackground(color){const c=validHexColor(color)?String(color).trim().toLowerCase():DEFAULT_LAUNCH_BACKGROUND;appSettings.launch_background_color=c;document.documentElement.style.setProperty('--launch-bg',c);const launch=q('appLaunchScreen');if(launch)launch.style.backgroundColor=c;try{localStorage.setItem('swapnoneer_launch_background_color',c)}catch(e){}}
+function fillSettingsForm(){const c=appSettings.launch_background_color||DEFAULT_LAUNCH_BACKGROUND;if(q('launchBackgroundColor'))q('launchBackgroundColor').value=c;if(q('launchBackgroundHex'))q('launchBackgroundHex').value=c}
+async function loadAppSettings(){let c=null;try{const local=localStorage.getItem('swapnoneer_launch_background_color');if(validHexColor(local))c=local.toLowerCase()}catch(e){}if(c)applyLaunchBackground(c);if(sb){const {data,error}=await sb.from('app_settings').select('launch_background_color').eq('id',1).maybeSingle();if(!error&&data&&validHexColor(data.launch_background_color))applyLaunchBackground(data.launch_background_color)}fillSettingsForm()}
+async function saveLaunchBackground(){if(!adminUser){showMessage('অ্যাডমিন হিসেবে লগইন করুন।',false,'settingsMsg');return}const c=String(q('launchBackgroundHex').value||q('launchBackgroundColor').value||'').trim().toLowerCase();if(!validHexColor(c)){showMessage('সঠিক HEX রং দিন, যেমন #ffffff।',false,'settingsMsg');return}const {error}=await sb.from('app_settings').upsert({id:1,launch_background_color:c,updated_at:new Date().toISOString()},{onConflict:'id'});if(error){showMessage('সেটিংস সংরক্ষণ করা যায়নি। আগে app_settings.sql চালান।',false,'settingsMsg');return}applyLaunchBackground(c);q('launchBackgroundColor').value=c;q('launchBackgroundHex').value=c;showMessage('ব্যাকগ্রাউন্ডের রং সংরক্ষণ হয়েছে ✓',true,'settingsMsg')}
+function resetLaunchBackground(){q('launchBackgroundColor').value=DEFAULT_LAUNCH_BACKGROUND;q('launchBackgroundHex').value=DEFAULT_LAUNCH_BACKGROUND;applyLaunchBackground(DEFAULT_LAUNCH_BACKGROUND);if(q('settingsMsg'))showMessage('ডিফল্ট সাদা রং নির্বাচন করা হয়েছে। সংরক্ষণ চাপুন।',true,'settingsMsg')}
+function hideLaunchScreen(){const el=q('appLaunchScreen');if(!el)return;setTimeout(()=>el.classList.add('hide'),250);setTimeout(()=>el.remove(),650)}
 // বার্ষিক হিসাবের মূল নিয়ম: প্রতি সদস্যের জন্য বছরে ১২ মাস × ৳৫০০ = ৳৬,০০০।
 // বকেয়া সবসময় বার্ষিক মোট পাওনা থেকে প্রকৃত পরিশোধ বাদ দিয়ে অটোমেটিক গণনা হবে।
 const MONTHLY_REQUIRED=500;
@@ -116,7 +125,8 @@ function currentFund(){return remainingFund()-totalAssets('all')}
 function downloadButton(kind){return `<div class="result-download"><button class="download-btn" type="button" onclick="${kind==='personal'?'downloadPersonalReport()':'downloadAllMembersReport()'}">⬇️ বিস্তারিত হিসাব ডাউনলোড</button></div>`}
 
 async function load(){
-  if(!sb){q('totalResult').innerHTML='<div class="empty-state">Supabase configuration পাওয়া যায়নি।</div>';return;}
+  await loadAppSettings().catch(()=>{});
+  if(!sb){q('totalResult').innerHTML='<div class="empty-state">Supabase configuration পাওয়া যায়নি।</div>';hideLaunchScreen();return;}
   q('totalResult').innerHTML='<div class="loading">ডাটা লোড হচ্ছে...</div>';
   // Supabase-এর একবারের select সাধারণত সর্বোচ্চ ১০০০টি row ফেরত দিতে পারে।
   // ২০২১–২০২৪ সালের payments মোট ১৬৩৬টি হওয়ায় একবারে নিলে ২০২৩/২০২৪-এর
@@ -142,10 +152,11 @@ async function load(){
     sb.from('member_dividend_visibility').select('member_id,is_public')
   ]);
   const errors=[m,p,pr,e,a,n].filter(x=>x.error && x.error.code!=='42P01');
-  if(errors.length){console.error(...errors.map(x=>x.error));q('totalResult').innerHTML='<div class="empty-state">ডাটা লোড করতে সমস্যা হয়েছে। Supabase/RLS সেটিংস পরীক্ষা করুন।</div>';return;}
+  if(errors.length){console.error(...errors.map(x=>x.error));q('totalResult').innerHTML='<div class="empty-state">ডাটা লোড করতে সমস্যা হয়েছে। Supabase/RLS সেটিংস পরীক্ষা করুন।</div>';hideLaunchScreen();return;}
   members=m.data||[];payments=p.data||[];profits=pr.data||[];expenses=e.data||[];assets=a.data||[];notices=n.data||[];dividendVisibility=dv?.data||[];
   fillYearSelectors();fillMemberSelectors();
   renderTotal();renderPersonalTotal();renderProfitExpenseDetails();renderFund();renderNotices();renderAllMembersPreview();
+  hideLaunchScreen();
   await checkAdmin();
 }
 
@@ -389,6 +400,7 @@ function renderAdminData(){
   q('adminNotices').innerHTML=`<table><thead><tr><th>শিরোনাম</th><th class="name">বিবরণ</th><th>তারিখ</th><th>অ্যাকশন</th></tr></thead><tbody>`+notices.map(x=>`<tr><td>${esc(x.title)}</td><td class="name">${esc(x.description)}</td><td>${esc(x.publish_date||'')}</td><td class="row-actions"><button class="small-btn edit" onclick="editNotice('${esc(x.id)}')">Edit</button><button class="small-btn del" onclick="del('notices','${esc(x.id)}')">Delete</button></td></tr>`).join('')+`</tbody></table>`;
   q('adminDividends').innerHTML=`<div class="dividend-admin-tools"><button type="button" class="btn btn-primary" onclick="makeAllDividendsPublic()">🟢 সকল সদস্যের লভ্যাংশ Public করুন</button></div><div class="dividend-admin-tools"><button type="button" class="btn danger" onclick="makeAllDividendsHidden()">🔴 সকল সদস্যের লভ্যাংশ Hide করুন</button></div><table><thead><tr><th>ক্রমিক</th><th class="name">সদস্য</th><th>সকল বছরের জমা</th><th>লভ্যাংশ</th><th>অবস্থা</th><th>অ্যাকশন</th></tr></thead><tbody>`+orderedMembers.map((m,i)=>{const pub=isDividendPublic(m.id);return `<tr><td>${Number(m.serial_no||i+1).toLocaleString('bn-BD')}</td><td class="name">${esc(m.name||'')}</td><td>${money(memberPaid(m,'all'))}</td><td>${money(memberDividend(m))}</td><td>${pub?'Public':'Hidden'}</td><td class="row-actions"><button class="small-btn ${pub?'del':'edit'}" onclick="toggleDividendVisibility('${esc(m.id)}',${!pub})">${pub?'Hide':'Public'}</button></td></tr>`}).join('')+`</tbody></table>`;
 
+  fillSettingsForm();
 }
 async function checkAdmin(){if(!sb)return;const {data:{session}}=await sb.auth.getSession();adminUser=session?.user||null;if(!adminUser){q('loginBox').hidden=false;q('adminBox').hidden=true;return}const {data,error}=await sb.from('admin_users').select('user_id').eq('user_id',adminUser.id).maybeSingle();if(error||!data){q('loginBox').hidden=false;q('adminBox').hidden=true;q('loginMsg').textContent='এই অ্যাকাউন্টে অ্যাডমিন অনুমতি নেই।';return}q('loginBox').hidden=true;q('adminBox').hidden=false;q('adminUser').textContent=adminUser.email||'Admin';renderAdminData()}
 async function login(){if(!sb){showMessage('Supabase configuration পাওয়া যায়নি।',false,'loginMsg');return}showMessage('লগইন হচ্ছে...',true,'loginMsg');const {error}=await sb.auth.signInWithPassword({email:q('adminEmail').value.trim(),password:q('adminPassword').value});if(error){showMessage(error.message,false,'loginMsg');return}await checkAdmin();q('adminPassword').value=''}
@@ -589,6 +601,9 @@ document.addEventListener('DOMContentLoaded',()=>{
   q('loginBtn').addEventListener('click',login);q('logoutBtn').addEventListener('click',logout);
   q('addOpen').addEventListener('click',()=>{const value=q('addSelect').value;if(!value){showMessage('আগে একটি যুক্ত করার বিষয় নির্বাচন করুন।',false);return}openForm(value);q('addArea').scrollIntoView({behavior:'smooth',block:'start'})});
   q('manageOpen').addEventListener('click',()=>{const value=q('manageSelect').value;if(!value){showMessage('আগে একটি সম্পাদনার বিষয় নির্বাচন করুন।',false);return}openManagement(value);q('managementArea').scrollIntoView({behavior:'smooth',block:'start'})});
+  q('saveBackgroundColor').addEventListener('click',saveLaunchBackground);q('resetBackgroundColor').addEventListener('click',resetLaunchBackground);
+  q('launchBackgroundColor').addEventListener('input',e=>{if(validHexColor(e.target.value))q('launchBackgroundHex').value=e.target.value.toLowerCase()});
+  q('launchBackgroundHex').addEventListener('input',e=>{const v=e.target.value.trim();if(validHexColor(v))q('launchBackgroundColor').value=v.toLowerCase()});
   q('memberForm').addEventListener('submit',e=>{e.preventDefault();saveMember()});q('paymentForm').addEventListener('submit',e=>{e.preventDefault();savePayment()});q('profitForm').addEventListener('submit',e=>{e.preventDefault();saveProfit()});q('expenseForm').addEventListener('submit',e=>{e.preventDefault();saveExpense()});q('assetForm').addEventListener('submit',e=>{e.preventDefault();saveAsset()});q('noticeForm').addEventListener('submit',e=>{e.preventDefault();saveNotice()});
   route();load();
 });
