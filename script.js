@@ -1,5 +1,17 @@
+// Supabase client: browser-safe Publishable Key + bounded network timeout.
+// A slow Supabase request must never keep the whole app's launch screen open forever.
 const sb=(window.supabase&&window.SUPABASE_URL&&window.SUPABASE_ANON_KEY)
-  ?window.supabase.createClient(window.SUPABASE_URL,window.SUPABASE_ANON_KEY):null;
+  ?window.supabase.createClient(window.SUPABASE_URL,window.SUPABASE_ANON_KEY,{
+      auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true},
+      global:{
+        fetch:(input,init={})=>{
+          const controller=new AbortController();
+          const timeout=setTimeout(()=>controller.abort(),15000);
+          const opts={...init,signal:controller.signal};
+          return fetch(input,opts).finally(()=>clearTimeout(timeout));
+        }
+      }
+    }):null;
 
 const months=['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
 const money=n=>`৳ ${Number(n||0).toLocaleString('bn-BD')}`;
@@ -11,7 +23,7 @@ let appSettings={launch_background_color:DEFAULT_LAUNCH_BACKGROUND};
 function validHexColor(v){return /^#[0-9A-Fa-f]{6}$/.test(String(v||'').trim())}
 function applyLaunchBackground(color){const c=validHexColor(color)?String(color).trim().toLowerCase():DEFAULT_LAUNCH_BACKGROUND;appSettings.launch_background_color=c;document.documentElement.style.setProperty('--launch-bg',c);const launch=q('appLaunchScreen');if(launch)launch.style.backgroundColor=c;try{localStorage.setItem('swapnoneer_launch_background_color',c)}catch(e){}}
 function fillSettingsForm(){const c=appSettings.launch_background_color||DEFAULT_LAUNCH_BACKGROUND;if(q('launchBackgroundColor'))q('launchBackgroundColor').value=c;if(q('launchBackgroundHex'))q('launchBackgroundHex').value=c}
-async function loadAppSettings(){let c=null;try{const local=localStorage.getItem('swapnoneer_launch_background_color');if(validHexColor(local))c=local.toLowerCase()}catch(e){}if(c)applyLaunchBackground(c);if(sb){const {data,error}=await sb.from('app_settings').select('launch_background_color').eq('id',1).maybeSingle();if(!error&&data&&validHexColor(data.launch_background_color))applyLaunchBackground(data.launch_background_color)}fillSettingsForm()}
+async function loadAppSettings(){let c=null;try{const local=localStorage.getItem('swapnoneer_launch_background_color');if(validHexColor(local))c=local.toLowerCase()}catch(e){}if(c)applyLaunchBackground(c);fillSettingsForm();if(sb){try{const {data,error}=await sb.from('app_settings').select('launch_background_color').eq('id',1).maybeSingle();if(!error&&data&&validHexColor(data.launch_background_color))applyLaunchBackground(data.launch_background_color)}catch(e){console.warn('App settings load skipped:',e)}}fillSettingsForm()}
 async function saveLaunchBackground(){if(!adminUser){showMessage('অ্যাডমিন হিসেবে লগইন করুন।',false,'settingsMsg');return}const c=String(q('launchBackgroundHex').value||q('launchBackgroundColor').value||'').trim().toLowerCase();if(!validHexColor(c)){showMessage('সঠিক HEX রং দিন, যেমন #ffffff।',false,'settingsMsg');return}const {error}=await sb.from('app_settings').upsert({id:1,launch_background_color:c,updated_at:new Date().toISOString()},{onConflict:'id'});if(error){showMessage('সেটিংস সংরক্ষণ করা যায়নি। আগে app_settings.sql চালান।',false,'settingsMsg');return}applyLaunchBackground(c);q('launchBackgroundColor').value=c;q('launchBackgroundHex').value=c;showMessage('ব্যাকগ্রাউন্ডের রং সংরক্ষণ হয়েছে ✓',true,'settingsMsg')}
 function resetLaunchBackground(){q('launchBackgroundColor').value=DEFAULT_LAUNCH_BACKGROUND;q('launchBackgroundHex').value=DEFAULT_LAUNCH_BACKGROUND;applyLaunchBackground(DEFAULT_LAUNCH_BACKGROUND);if(q('settingsMsg'))showMessage('ডিফল্ট সাদা রং নির্বাচন করা হয়েছে। সংরক্ষণ চাপুন।',true,'settingsMsg')}
 function hideLaunchScreen(){const el=q('appLaunchScreen');if(!el)return;setTimeout(()=>el.classList.add('hide'),250);setTimeout(()=>el.remove(),650)}
@@ -124,13 +136,15 @@ function remainingFund(){return totalPaid('all')+totalProfit('all')-totalExpense
 function currentFund(){return remainingFund()-totalAssets('all')}
 function downloadButton(kind){return `<div class="result-download"><button class="download-btn" type="button" onclick="${kind==='personal'?'downloadPersonalReport()':'downloadAllMembersReport()'}">⬇️ বিস্তারিত হিসাব ডাউনলোড</button></div>`}
 
+let dataLoadPromise=null;
+let dataLoaded=false;
+
 async function load(){
-  await loadAppSettings().catch(()=>{});
+  // Apply cached/local settings immediately; remote settings load in the background.
+  loadAppSettings().catch(()=>{});
   if(!sb){q('totalResult').innerHTML='<div class="empty-state">Supabase configuration পাওয়া যায়নি।</div>';hideLaunchScreen();return;}
   q('totalResult').innerHTML='<div class="loading">ডাটা লোড হচ্ছে...</div>';
-  // Supabase-এর একবারের select সাধারণত সর্বোচ্চ ১০০০টি row ফেরত দিতে পারে।
-  // ২০২১–২০২৪ সালের payments মোট ১৬৩৬টি হওয়ায় একবারে নিলে ২০২৩/২০২৪-এর
-  // পরের রেকর্ডগুলো বাদ পড়ে যাচ্ছিল। তাই শুধু payments-এর জন্য সব row page করে নেওয়া হচ্ছে।
+
   const fetchAllPayments=async()=>{
     const rows=[];
     const pageSize=1000;
@@ -142,23 +156,33 @@ async function load(){
     }
     return {data:rows,error:null};
   };
-  const [m,p,pr,e,a,n,dv]=await Promise.all([
-    sb.from('members').select('*').eq('status','active').order('serial_no',{ascending:true,nullsFirst:false}).order('created_at'),
-    fetchAllPayments(),
-    sb.from('profits').select('*').order('year'),
-    sb.from('expenses').select('*').order('date',{ascending:false}),
-    sb.from('assets').select('*').eq('status','active').order('date',{ascending:false}),
-    sb.from('notices').select('*').eq('status','published').order('publish_date',{ascending:false}),
-    sb.from('member_dividend_visibility').select('member_id,is_public')
-  ]);
-  const errors=[m,p,pr,e,a,n].filter(x=>x.error && x.error.code!=='42P01');
-  if(errors.length){console.error(...errors.map(x=>x.error));q('totalResult').innerHTML='<div class="empty-state">ডাটা লোড করতে সমস্যা হয়েছে। Supabase/RLS সেটিংস পরীক্ষা করুন।</div>';hideLaunchScreen();return;}
-  members=m.data||[];payments=p.data||[];profits=pr.data||[];expenses=e.data||[];assets=a.data||[];notices=n.data||[];dividendVisibility=dv?.data||[];
-  fillYearSelectors();fillMemberSelectors();
-  renderTotal();renderPersonalTotal();renderProfitExpenseDetails();renderFund();renderNotices();renderAllMembersPreview();
-  hideLaunchScreen();
-  await checkAdmin();
+
+  try{
+    const [m,p,pr,e,a,n,dv]=await Promise.all([
+      sb.from('members').select('*').eq('status','active').order('serial_no',{ascending:true,nullsFirst:false}).order('created_at'),
+      fetchAllPayments(),
+      sb.from('profits').select('*').order('year'),
+      sb.from('expenses').select('*').order('date',{ascending:false}),
+      sb.from('assets').select('*').eq('status','active').order('date',{ascending:false}),
+      sb.from('notices').select('*').eq('status','published').order('publish_date',{ascending:false}),
+      sb.from('member_dividend_visibility').select('member_id,is_public')
+    ]);
+    const errors=[m,p,pr,e,a,n].filter(x=>x.error && x.error.code!=='42P01');
+    if(errors.length){
+      console.error(...errors.map(x=>x.error));
+      q('totalResult').innerHTML='<div class="empty-state">ডাটা লোড করতে সমস্যা হয়েছে। Supabase/RLS সেটিংস পরীক্ষা করুন।</div>';
+      return;
+    }
+    members=m.data||[];payments=p.data||[];profits=pr.data||[];expenses=e.data||[];assets=a.data||[];notices=n.data||[];dividendVisibility=dv?.data||[];
+    fillYearSelectors();fillMemberSelectors();
+    renderTotal();renderPersonalTotal();renderProfitExpenseDetails();renderFund();renderNotices();renderAllMembersPreview();
+    dataLoaded=true;
+  }catch(error){
+    console.error('Initial data load failed:',error);
+    q('totalResult').innerHTML='<div class="empty-state">Supabase থেকে তথ্য আনা যাচ্ছে না। Internet/Project connection পরীক্ষা করুন।</div>';
+  }
 }
+
 
 function renderPersonalTotal(){
   const deposit=totalPaid('all'),profit=totalProfit('all'),expense=totalExpense('all'),remaining=deposit+profit-expense;
@@ -402,9 +426,9 @@ function renderAdminData(){
 
   fillSettingsForm();
 }
-async function checkAdmin(){if(!sb)return;try{const {data:{session},error:sessionError}=await sb.auth.getSession();if(sessionError)throw sessionError;adminUser=session?.user||null;if(!adminUser){q('loginBox').hidden=false;q('adminBox').hidden=true;return}const {data,error}=await sb.from('admin_users').select('user_id').eq('user_id',adminUser.id).maybeSingle();if(error||!data){q('loginBox').hidden=false;q('adminBox').hidden=true;q('loginMsg').textContent=error?'অ্যাডমিন অনুমতি যাচাই করা যায়নি।':'এই অ্যাকাউন্টে অ্যাডমিন অনুমতি নেই।';return}q('loginBox').hidden=true;q('adminBox').hidden=false;q('adminUser').textContent=adminUser.email||'Admin';await renderAdminData()}catch(error){console.error('Admin check failed:',error);adminUser=null;q('loginBox').hidden=false;q('adminBox').hidden=true;showMessage(formatSupabaseAuthError(error),false,'loginMsg')}}
-function formatSupabaseAuthError(error){const message=String(error?.message||error||'').trim();const status=Number(error?.status||0);if(!message)return 'Supabase-এর সাথে সংযোগ করা যাচ্ছে না।';if(status===429)return 'অনেকবার চেষ্টা হয়েছে। কিছুক্ষণ পর আবার চেষ্টা করুন।';if(status>=500)return 'Supabase Auth সার্ভার থেকে উত্তর পাওয়া যাচ্ছে না। Supabase Project-এর Auth/Session সেটিংস পরীক্ষা করুন।';if(/failed to fetch|network|fetch/i.test(message))return 'Supabase-এর সাথে সংযোগ করা যাচ্ছে না। Internet, Supabase URL/Key এবং Project-এর Auth service পরীক্ষা করুন।';return message}
-async function login(){if(!sb){showMessage('Supabase configuration পাওয়া যায়নি।',false,'loginMsg');return}const email=q('adminEmail').value.trim();const password=q('adminPassword').value;if(!email||!password){showMessage('ইমেইল ও পাসওয়ার্ড দিন।',false,'loginMsg');return}showMessage('লগইন হচ্ছে...',true,'loginMsg');try{const {error}=await sb.auth.signInWithPassword({email,password});if(error){showMessage(formatSupabaseAuthError(error),false,'loginMsg');return}await checkAdmin();q('adminPassword').value=''}catch(error){console.error('Admin login failed:',error);showMessage(formatSupabaseAuthError(error),false,'loginMsg')}}
+async function checkAdmin(){if(!sb)return;try{const {data:{session},error:sessionError}=await sb.auth.getSession();if(sessionError)throw sessionError;adminUser=session?.user||null;if(!adminUser){q('loginBox').hidden=false;q('adminBox').hidden=true;return}const {data,error}=await sb.from('admin_users').select('user_id').eq('user_id',adminUser.id).maybeSingle();if(error||!data){q('loginBox').hidden=false;q('adminBox').hidden=true;q('loginMsg').textContent=error?'অ্যাডমিন অনুমতি যাচাই করা যায়নি।':'এই অ্যাকাউন্টে অ্যাডমিন অনুমতি নেই।';return}q('loginBox').hidden=true;q('adminBox').hidden=false;q('adminUser').textContent=adminUser.email||'Admin';if(dataLoaded)await renderAdminData()}catch(error){console.error('Admin check failed:',error);adminUser=null;q('loginBox').hidden=false;q('adminBox').hidden=true;showMessage(formatSupabaseAuthError(error),false,'loginMsg')}}
+function formatSupabaseAuthError(error){const message=String(error?.message||error||'').trim();const status=Number(error?.status||0);if(error?.name==='AbortError')return 'Supabase উত্তর দিতে বেশি সময় নিচ্ছে। Internet বা Supabase Project connection পরীক্ষা করুন।';if(!message)return 'Supabase-এর সাথে সংযোগ করা যাচ্ছে না।';if(status===429)return 'অনেকবার চেষ্টা হয়েছে। কিছুক্ষণ পর আবার চেষ্টা করুন।';if(status===400)return /invalid login credentials/i.test(message)?'ইমেইল বা পাসওয়ার্ড সঠিক নয়।':'Supabase Auth request গ্রহণ করেনি: '+message;if(status>=500)return 'Supabase Auth সার্ভার থেকে উত্তর পাওয়া যাচ্ছে না। Project-এর Auth service পরীক্ষা করুন।';if(/failed to fetch|network|fetch|cors|load failed/i.test(message))return 'Supabase Auth request পাঠানো যাচ্ছে না। Internet, Project URL/Publishable Key, অথবা Auth service পরীক্ষা করুন।';return message}
+async function login(){if(!sb){showMessage('Supabase configuration পাওয়া যায়নি।',false,'loginMsg');return}const email=q('adminEmail').value.trim();const password=q('adminPassword').value;if(!email||!password){showMessage('ইমেইল ও পাসওয়ার্ড দিন।',false,'loginMsg');return}const btn=q('loginBtn');if(btn){btn.disabled=true;btn.dataset.oldText=btn.textContent;btn.textContent='লগইন হচ্ছে...'}showMessage('লগইন হচ্ছে...',true,'loginMsg');try{const {data,error}=await sb.auth.signInWithPassword({email,password});if(error){showMessage(formatSupabaseAuthError(error),false,'loginMsg');return}adminUser=data?.user||null;q('loginBox').hidden=true;q('adminBox').hidden=false;q('adminUser').textContent=adminUser?.email||email;showMessage('লগইন সফল হয়েছে।',true,'loginMsg');if(!dataLoaded){showMessage('তথ্য লোড হচ্ছে, অনুগ্রহ করে এক মুহূর্ত অপেক্ষা করুন।',true,'loginMsg');}else await renderAdminData();q('adminPassword').value=''}catch(error){console.error('Admin login failed:',error);showMessage(formatSupabaseAuthError(error),false,'loginMsg')}finally{if(btn){btn.disabled=false;btn.textContent=btn.dataset.oldText||'লগইন'}}}
 async function logout(){await sb.auth.signOut();location.hash='admin';location.reload()}
 function openForm(name){document.querySelectorAll('.admin-form').forEach(f=>f.classList.remove('active'));const f=q(name+'Form');if(f)f.classList.add('active')}
 async function toggleDividendVisibility(memberId,isPublic){
@@ -606,5 +630,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   q('launchBackgroundColor').addEventListener('input',e=>{if(validHexColor(e.target.value))q('launchBackgroundHex').value=e.target.value.toLowerCase()});
   q('launchBackgroundHex').addEventListener('input',e=>{const v=e.target.value.trim();if(validHexColor(v))q('launchBackgroundColor').value=v.toLowerCase()});
   q('memberForm').addEventListener('submit',e=>{e.preventDefault();saveMember()});q('paymentForm').addEventListener('submit',e=>{e.preventDefault();savePayment()});q('profitForm').addEventListener('submit',e=>{e.preventDefault();saveProfit()});q('expenseForm').addEventListener('submit',e=>{e.preventDefault();saveExpense()});q('assetForm').addEventListener('submit',e=>{e.preventDefault();saveAsset()});q('noticeForm').addEventListener('submit',e=>{e.preventDefault();saveNotice()});
-  route();load();
+  route();
+  // Show the interface immediately. Database loading continues in the background.
+  hideLaunchScreen();
+  dataLoadPromise=load().then(()=>{if(adminUser&&dataLoaded)renderAdminData();});
+  // Session check is independent of the large public-data load, so Admin login opens quickly.
+  checkAdmin();
 });
