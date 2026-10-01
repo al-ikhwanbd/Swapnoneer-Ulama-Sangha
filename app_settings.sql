@@ -27,3 +27,47 @@ create policy "admins can update app settings" on public.app_settings for update
 -- authenticated admins may write.
 grant select on table public.app_settings to anon, authenticated;
 grant insert, update on table public.app_settings to authenticated;
+
+
+-- Shared website logo storage (public read, Admin-only write).
+-- Safe to run after the original migration; does not delete existing data.
+insert into storage.buckets (id, name, public)
+values ('website-assets', 'website-assets', true)
+on conflict (id) do update set public = true;
+
+drop policy if exists "public can read website assets" on storage.objects;
+create policy "public can read website assets"
+on storage.objects for select
+to public
+using (bucket_id = 'website-assets');
+
+drop policy if exists "admins can upload website assets" on storage.objects;
+create policy "admins can upload website assets"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'website-assets'
+  and exists (select 1 from public.admin_users au where au.user_id = auth.uid())
+);
+
+drop policy if exists "admins can update website assets" on storage.objects;
+create policy "admins can update website assets"
+on storage.objects for update
+to authenticated
+using (
+  bucket_id = 'website-assets'
+  and exists (select 1 from public.admin_users au where au.user_id = auth.uid())
+)
+with check (
+  bucket_id = 'website-assets'
+  and exists (select 1 from public.admin_users au where au.user_id = auth.uid())
+);
+
+drop policy if exists "admins can delete website assets" on storage.objects;
+create policy "admins can delete website assets"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'website-assets'
+  and exists (select 1 from public.admin_users au where au.user_id = auth.uid())
+);

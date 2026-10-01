@@ -21,7 +21,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2"></script>
 </head>
 <body>
-<div id="appLaunchScreen" class="app-launch-screen" aria-hidden="true"><img src="Swapnoneer logo.png" alt=""><span>স্বপ্ননীড় উলামা সংঘ</span></div>
+<div id="appLaunchScreen" class="app-launch-screen" aria-hidden="true"><img id="appLaunchLogo" src="Swapnoneer logo.png" alt=""><span>স্বপ্ননীড় উলামা সংঘ</span></div>
 <header class="top-header">
   <div class="nav container">
     <a class="brand" href="#personal" aria-label="স্বপ্ননীড় উলামা সংঘ">
@@ -180,6 +180,7 @@
               <label>YouTube লিংক<input id="siteYoutube" type="url" placeholder="https://..."></label>
               <label>Website URL<input id="siteWebsite" type="url" placeholder="https://..."></label>
               <label>Logo URL<input id="siteLogo" type="url" placeholder="https://... (ঐচ্ছিক)"></label>
+              <div class="logo-upload-box"><div class="logo-upload-preview"><img id="logoPreview" src="Swapnoneer logo.png" alt="Logo preview"></div><div class="logo-upload-controls"><b>Logo Upload</b><small>ফোন/কম্পিউটার থেকে PNG, JPG/JPEG বা WebP (সর্বোচ্চ 3 MB)</small><input id="logoFileInput" type="file" accept="image/png,image/jpeg,image/webp"><button type="button" class="btn btn-light" id="uploadLogoBtn">⬆️ লোগো আপলোড</button></div></div>
             </div>
           </div>
           <div class="settings-card">
