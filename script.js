@@ -27,7 +27,16 @@ const DEFAULT_WEB_SETTINGS={
   ],
   footer_text:'সকল অধিকার সংরক্ষিত'
 };
-const COLOR_PALETTE=[['Blue','#0000ff'],['Green','#00c800'],['Orange','#ffa500'],['Yellow','#fff000'],['Purple','#b000b0'],['Brown','#8b4513'],['Gray','#bdbdbd'],['Red','#ff1b1b'],['Olive','#808000'],['Maroon','#a00000'],['Violet','#ee55ee'],['Charcoal','#36454f'],['Magenta','#ff00ff'],['Bronze','#cd7f32'],['Cream','#fffdd0'],['Tan','#d2b48c'],['Teal','#008080'],['Black','#000000'],['Mustard','#ffcc33'],['Navy Blue','#1455a8'],['Coral','#ff7f50'],['Burgundy','#800020'],['Lavender','#e6e6fa'],['Mauve','#b784a7'],['Peach','#ffdab9'],['Rust','#b7410e'],['Gold','#ffd700'],['Pink','#f45cae'],['Silver','#c0c0c0'],['Cyan','#00d9e8']];
+const COLOR_PALETTE=[
+['Swapnoneer Green','#0b6b4b'],['Deep Green','#075238'],['Emerald','#10b981'],['Forest Green','#228b22'],['Mint','#3eb489'],['Sage','#9caf88'],['Olive','#808000'],['Lime','#84cc16'],
+['Blue','#0000ff'],['Royal Blue','#4169e1'],['Cobalt','#0047ab'],['Sky Blue','#38bdf8'],['Light Blue','#87ceeb'],['Navy Blue','#1455a8'],['Teal','#008080'],['Turquoise','#40e0d0'],['Cyan','#00d9e8'],['Aqua','#00ffff'],
+['Purple','#800080'],['Royal Purple','#7851a9'],['Violet','#ee55ee'],['Lavender','#e6e6fa'],['Mauve','#b784a7'],['Indigo','#4b0082'],['Magenta','#ff00ff'],['Plum','#8e4585'],
+['Red','#ff1b1b'],['Crimson','#dc143c'],['Scarlet','#ff2400'],['Maroon','#a00000'],['Burgundy','#800020'],['Rose','#e11d48'],['Pink','#f45cae'],['Hot Pink','#ff69b4'],['Coral','#ff7f50'],['Salmon','#fa8072'],
+['Orange','#ffa500'],['Tangerine','#f97316'],['Peach','#ffdab9'],['Amber','#f59e0b'],['Gold','#ffd700'],['Mustard','#ffcc33'],['Yellow','#fff000'],['Lemon','#fff44f'],['Cream','#fffdd0'],
+['Brown','#8b4513'],['Chocolate','#7b3f00'],['Bronze','#cd7f32'],['Copper','#b87333'],['Rust','#b7410e'],['Tan','#d2b48c'],['Beige','#f5f5dc'],
+['Black','#000000'],['Charcoal','#36454f'],['Dark Gray','#4b5563'],['Gray','#bdbdbd'],['Silver','#c0c0c0'],['Light Gray','#e5e7eb'],['White','#ffffff'],
+['Deep Sea','#0f4c5c'],['Petrol Blue','#006b78'],['Ocean','#0077b6'],['Denim','#1560bd'],['Periwinkle','#ccccff'],['Lilac','#c8a2c8'],['Raspberry','#e30b5c'],['Terracotta','#e2725b'],['Apricot','#fbceb1'],['Khaki','#c3b091'],['Midnight','#191970'],['Slate','#708090'],['Graphite','#41424c'],['Ivory','#fffff0']
+];
 function deepCloneSettings(){return JSON.parse(JSON.stringify(DEFAULT_WEB_SETTINGS))}
 function mergeSettings(raw){const out=deepCloneSettings();if(raw&&typeof raw==='object'){Object.keys(out).forEach(k=>{if(k==='colors'&&raw.colors)Object.assign(out.colors,raw.colors);else if(Array.isArray(out[k])&&Array.isArray(raw[k])){const map=new Map(raw[k].map(x=>[String(x.id),x]));out[k]=out[k].map(x=>({...x,...(map.get(String(x.id))||{})}));}else if(typeof raw[k]==='string')out[k]=raw[k]});if(raw.launch_background_color)out.colors.launch=raw.launch_background_color}return out}
 function applyWebSettings(raw){appSettings=mergeSettings(raw);const c=appSettings.colors;const root=document.documentElement;root.style.setProperty('--green',c.primary);root.style.setProperty('--green-dark',c.primary);root.style.setProperty('--green-soft',c.primary+'18');root.style.setProperty('--gold',c.secondary);root.style.setProperty('--gold-soft',c.secondary+'18');root.style.setProperty('--site-header',c.header);root.style.setProperty('--site-bg',c.background);root.style.setProperty('--site-footer',c.footer);root.style.setProperty('--site-button',c.button);root.style.setProperty('--text',c.text);root.style.setProperty('--launch-bg',c.launch);
