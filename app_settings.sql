@@ -22,3 +22,8 @@ drop policy if exists "admins can insert app settings" on public.app_settings;
 create policy "admins can insert app settings" on public.app_settings for insert to authenticated with check (exists (select 1 from public.admin_users au where au.user_id = auth.uid()));
 drop policy if exists "admins can update app settings" on public.app_settings;
 create policy "admins can update app settings" on public.app_settings for update to authenticated using (exists (select 1 from public.admin_users au where au.user_id = auth.uid())) with check (exists (select 1 from public.admin_users au where au.user_id = auth.uid()));
+
+-- Ensure PostgREST API roles can reach the table; RLS still controls which rows
+-- authenticated admins may write.
+grant select on table public.app_settings to anon, authenticated;
+grant insert, update on table public.app_settings to authenticated;
