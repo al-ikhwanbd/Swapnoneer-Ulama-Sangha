@@ -25,18 +25,18 @@
 <header class="top-header">
   <div class="nav container">
     <a class="brand" href="#personal" aria-label="স্বপ্ননীড় উলামা সংঘ">
-      <img class="logo" src="Swapnoneer logo.png" alt="স্বপ্ননীড় উলামা সংঘের লোগো">
+      <img class="logo" id="siteLogoImg" src="Swapnoneer logo.png" alt="স্বপ্ননীড় উলামা সংঘের লোগো">
       <div class="brand-text">
-        <strong>স্বপ্ননীড় উলামা সংঘ</strong>
-        <span>সংস্থার হিসাব অনলাইনে দেখুন</span>
+        <strong id="siteNameHeader">স্বপ্ননীড় উলামা সংঘ</strong>
+        <span id="siteTaglineHeader">সংস্থার হিসাব অনলাইনে দেখুন</span>
       </div>
     </a>
     <button class="menu-btn" id="menuBtn" aria-label="মেইন মেনু" aria-expanded="false">☰</button>
   </div>
   <div class="hero">
     <div class="container">
-      <h1>স্বপ্ননীড় উলামা সংঘ</h1>
-      <p>মোমেনশাহী, ঢাকা, বাংলাদেশ</p>
+      <h1 id="siteNameHero">স্বপ্ননীড় উলামা সংঘ</h1>
+      <p id="siteAddressHero">মোমেনশাহী, ঢাকা, বাংলাদেশ</p>
     </div>
   </div>
 </header>
@@ -44,15 +44,15 @@
 <div class="menu-overlay" id="menuOverlay"></div>
 <nav id="mobileMenu" aria-label="মেইন মেনু">
   <button class="menu-close" id="menuClose" aria-label="মেনু বন্ধ করুন">×</button>
-  <div class="drawer-logo"><img src="Swapnoneer logo.png" alt="স্বপ্ননীড় উলামা সংঘের লোগো"></div>
+  <div class="drawer-logo"><img id="siteLogoDrawer" src="Swapnoneer logo.png" alt="স্বপ্ননীড় উলামা সংঘের লোগো"></div>
   <div class="drawer-title">মেইন মেনু</div>
-  <a href="#personal" data-view="personal"><span>👤</span>সদস্যদের ব্যক্তিগত হিসাব</a>
-  <a href="#members" data-view="members"><span>👥</span>সকল সদস্যদের হিসাব</a>
-  <a href="#due" data-view="due"><span>📊</span>সংস্থার মোট হিসাব</a>
-  <a href="#profitExpenseDetails" data-view="profitExpenseDetails"><span>📋</span>লভ্যাংশ ও খরচের বিবরণ</a>
-  <a href="#fund" data-view="fund"><span>💰</span>অবশিষ্ট তহবিলের খাত</a>
-  <a href="#notices" data-view="notices"><span>📢</span>নোটিশ</a>
-  <a href="#admin" data-view="admin"><span>🔐</span>এডমিন প্যানেল</a>
+  <a href="#personal" data-view="personal"><span>👤</span><span class="menu-label">সদস্যদের ব্যক্তিগত হিসাব</span></a>
+  <a href="#members" data-view="members"><span>👥</span><span class="menu-label">সকল সদস্যদের হিসাব</span></a>
+  <a href="#due" data-view="due"><span>📊</span><span class="menu-label">সংস্থার মোট হিসাব</span></a>
+  <a href="#profitExpenseDetails" data-view="profitExpenseDetails"><span>📋</span><span class="menu-label">লভ্যাংশ ও খরচের বিবরণ</span></a>
+  <a href="#fund" data-view="fund"><span>💰</span><span class="menu-label">অবশিষ্ট তহবিলের খাত</span></a>
+  <a href="#notices" data-view="notices"><span>📢</span><span class="menu-label">নোটিশ</span></a>
+  <a href="#admin" data-view="admin"><span>🔐</span><span class="menu-label">এডমিন প্যানেল</span></a>
 </nav>
 
 <main class="container main">
@@ -118,12 +118,12 @@
       <div class="admin-select-row">
         <select id="addSelect" aria-label="যুক্ত করার অপশন">
           <option value="">-- যুক্ত করার বিষয় নির্বাচন করুন --</option>
-          <option value="member">নতুন সদস্য</option>
-          <option value="payment">মাসিক জমা</option>
-          <option value="profit">লভ্যাংশ</option>
-          <option value="expense">বিবিধ খরচ</option>
-          <option value="asset">অবশিষ্ট তহবিলের খাত</option>
-          <option value="notice">নোটিশ</option>
+          <option value="member" data-setting-key="member">নতুন সদস্য</option>
+          <option value="payment" data-setting-key="payment">মাসিক জমা</option>
+          <option value="profit" data-setting-key="profit">লভ্যাংশ</option>
+          <option value="expense" data-setting-key="expense">বিবিধ খরচ</option>
+          <option value="asset" data-setting-key="asset">অবশিষ্ট তহবিলের খাত</option>
+          <option value="notice" data-setting-key="notice">নোটিশ</option>
         </select>
         <button type="button" class="btn btn-primary admin-open" id="addOpen">অনুসন্ধান করুন</button>
       </div>
@@ -146,14 +146,14 @@
       <div class="admin-select-row">
         <select id="manageSelect" aria-label="সম্পাদনার অপশন">
           <option value="">-- সম্পাদনার বিষয় নির্বাচন করুন --</option>
-          <option value="members">সদস্য ব্যবস্থাপনা</option>
-          <option value="payments">জমা ব্যবস্থাপনা</option>
-          <option value="profits">লভ্যাংশ ব্যবস্থাপনা</option>
-          <option value="expenses">খরচ ব্যবস্থাপনা</option>
-          <option value="assets">অবশিষ্ট তহবিলের খাত ব্যবস্থাপনা</option>
-          <option value="notices">নোটিশ ব্যবস্থাপনা</option>
-          <option value="dividends">সদস্য লভ্যাংশ প্রকাশ/গোপন</option>
-          <option value="settings">⚙️ সফটওয়্যার সেটিংস</option>
+          <option value="members" data-setting-key="members">সদস্য ব্যবস্থাপনা</option>
+          <option value="payments" data-setting-key="payments">জমা ব্যবস্থাপনা</option>
+          <option value="profits" data-setting-key="profits">লভ্যাংশ ব্যবস্থাপনা</option>
+          <option value="expenses" data-setting-key="expenses">খরচ ব্যবস্থাপনা</option>
+          <option value="assets" data-setting-key="assets">অবশিষ্ট তহবিলের খাত ব্যবস্থাপনা</option>
+          <option value="notices" data-setting-key="notices">নোটিশ ব্যবস্থাপনা</option>
+          <option value="dividends" data-setting-key="dividends">সদস্য লভ্যাংশ প্রকাশ/গোপন</option>
+          <option value="settings" data-setting-key="settings">⚙️ সফটওয়্যার সেটিংস</option>
         </select>
         <button type="button" class="btn btn-primary admin-open" id="manageOpen">অনুসন্ধান করুন</button>
       </div>
@@ -167,20 +167,45 @@
         <div id="manageNotices" class="admin-data"><h3>📢 নোটিশ ব্যবস্থাপনা</h3><div id="adminNotices" class="table-wrap"></div></div>
         <div id="manageDividends" class="admin-data"><h3>💰 সদস্য লভ্যাংশ প্রকাশ/গোপন</h3><div id="adminDividends" class="table-wrap"></div></div>
         <div id="manageSettings" class="admin-data">
-          <h3>⚙️ সফটওয়্যার সেটিংস</h3>
+          <h3>⚙️ ওয়েব সেটিংস</h3>
           <div class="settings-card">
-            <label for="launchBackgroundColor">সফটওয়্যারে ঢোকার সময় ব্যাকগ্রাউন্ডের রং</label>
-            <div class="color-setting-row">
-              <input id="launchBackgroundColor" type="color" value="#ffffff" aria-label="ব্যাকগ্রাউন্ডের রং নির্বাচন করুন">
-              <input id="launchBackgroundHex" type="text" value="#ffffff" maxlength="7" inputmode="text" placeholder="#ffffff" aria-label="ব্যাকগ্রাউন্ডের HEX রং">
+            <h4>🏢 ওয়েবসাইটের তথ্য</h4>
+            <div class="settings-grid">
+              <label>ওয়েবসাইট/প্রতিষ্ঠানের নাম<input id="siteName" type="text"></label>
+              <label>সাবটাইটেল / ট্যাগলাইন<input id="siteTagline" type="text"></label>
+              <label>ঠিকানা<input id="siteAddress" type="text"></label>
+              <label>মোবাইল নম্বর<input id="sitePhone" type="text"></label>
+              <label>ই-মেইল<input id="siteEmail" type="email"></label>
+              <label>Facebook লিংক<input id="siteFacebook" type="url" placeholder="https://..."></label>
+              <label>YouTube লিংক<input id="siteYoutube" type="url" placeholder="https://..."></label>
+              <label>Website URL<input id="siteWebsite" type="url" placeholder="https://..."></label>
+              <label>Logo URL<input id="siteLogo" type="url" placeholder="https://... (ঐচ্ছিক)"></label>
             </div>
-            <p class="muted">রং পরিবর্তন করে সংরক্ষণ করলে পরবর্তীবার সফটওয়্যার চালু হলে এই রংয়ের লঞ্চ/ব্যাকগ্রাউন্ড স্ক্রিন ও পেজের ব্যাকগ্রাউন্ড ব্যবহার হবে।</p>
-            <div class="form-actions">
-              <button type="button" class="btn btn-primary" id="saveBackgroundColor">💾 রং সংরক্ষণ</button>
-              <button type="button" class="btn btn-light" id="resetBackgroundColor">↩️ ডিফল্ট রং</button>
-            </div>
-            <div id="settingsMsg" class="message"></div>
           </div>
+          <div class="settings-card">
+            <h4>🎨 ওয়েবসাইটের রং</h4>
+            <p class="muted">নিচের প্রতিটি রঙের ঘর থেকে রেডিমেড রং বেছে নিন। চাইলে Custom Color দিয়েও যেকোনো রং নির্বাচন করতে পারবেন।</p>
+            <div id="colorSettingsGrid" class="color-settings-grid"></div>
+          </div>
+          <div class="settings-card">
+            <h4>☰ মেনুর অপশন</h4>
+            <p class="muted">মেনুর নাম, আইকন ও দেখানো/লুকানো পরিবর্তন করা যাবে। মূল পেজের কাজ/লিংক অক্ষুণ্ণ থাকবে।</p>
+            <div id="menuSettingsList" class="settings-list"></div>
+          </div>
+          <div class="settings-card">
+            <h4>🔧 Admin-এর সিলেকশন বক্সের অপশন</h4>
+            <p class="muted">অপশনের নাম ও দেখানো/লুকানো পরিবর্তন করা যাবে। ভিতরের system value অপরিবর্তিত থাকবে, তাই কোনো হিসাব/ফাংশন নষ্ট হবে না।</p>
+            <h5>যুক্ত করার অপশন</h5><div id="addOptionsSettingsList" class="settings-list"></div>
+            <h5>সম্পাদনার অপশন</h5><div id="manageOptionsSettingsList" class="settings-list"></div>
+          </div>
+          <div class="settings-card settings-note">
+            <b>ℹ️ নিরাপত্তা:</b> এই সেটিংস শুধু অনুমোদিত Admin পরিবর্তন করতে পারবেন। Save করার পর সেটিংস Supabase-এ সংরক্ষিত হবে এবং অন্য ডিভাইসেও একইভাবে দেখা যাবে।
+          </div>
+          <div class="form-actions settings-save-row">
+            <button type="button" class="btn btn-primary" id="saveWebSettings">💾 সব ওয়েব সেটিংস সংরক্ষণ</button>
+            <button type="button" class="btn btn-light" id="resetWebSettings">↩️ ডিফল্ট সেটিংস</button>
+          </div>
+          <div id="settingsMsg" class="message"></div>
         </div>
       </div>
       <div id="adminMsg" class="message"></div>
@@ -191,9 +216,9 @@
 </main>
 
 <footer>
-  <div class="container">© <span id="footerYear"></span> স্বপ্ননীড় উলামা সংঘ<div class="footer-sub">সকল অধিকার সংরক্ষিত</div></div>
+  <div class="container">© <span id="footerYear"></span> <span id="footerSiteName">স্বপ্ননীড় উলামা সংঘ</span><div id="footerContact" class="footer-contact"></div><div class="footer-sub" id="footerSub">সকল অধিকার সংরক্ষিত</div><div id="footerSocial" class="footer-social"></div></div>
 </footer>
 <script src="supabase-config.js"></script>
-<script src="script.js?v=46"></script>
+<script src="script.js?v=47"></script>
 </body>
 </html>
